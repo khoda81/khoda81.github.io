@@ -1,3 +1,6 @@
 [submodule "path-follower"]
 	path = path-follower
 	url = https://github.com/khoda81/path-follower.git
+[submodule "qbar"]
+	path = qbar
+	url = https://github.com/khoda81/qbar-web
