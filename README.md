@@ -1,22 +1,36 @@
 # khoda81.github.io
 
-Mahdi Khodabandeh's portfolio, rebuilt as a dependency-free static site.
+Mahdi Khodabandeh's portfolio, rebuilt as a small Bun-powered static site.
 
 The visual language is based on information theory rather than generic portfolio decoration: probability density, surprisal in nats/bits, arithmetic-coding intervals, code length, and live page telemetry.
 
 ## Development
 
-No framework or package install is required:
+Bun is the only tool you need. There are no package dependencies to install.
 
 ```bash
-python3 -m http.server 5173
+git submodule update --init --recursive
+bun run dev
 ```
 
-Then open <http://localhost:5173>.
+Bun serves the HTML entrypoint directly with its frontend dev server and HMR. Open the localhost URL printed by Bun (normally `http://localhost:3000`).
+
+## Production build
+
+```bash
+bun run build
+bun run preview
+```
+
+The production site is written to `dist/`. The build also carries the QBar and Path Follower submodules into `dist/qbar/` and `dist/path-follower/` so their existing URLs remain stable.
 
 ## Deployment
 
-Merging to `main` runs `.github/workflows/deploy.yml`, which publishes the static site to the existing `gh-pages` branch. The `qbar` and `path-follower` submodules are copied into the deployment so their existing URLs stay stable.
+Merging to `main` runs `.github/workflows/deploy.yml`. GitHub Actions installs Bun, runs the same `bun run build`, and publishes `dist/` to the existing `gh-pages` branch.
+
+## Live telemetry
+
+The age counter is anchored to 22 Mordad 1381 / 13 August 2002 at 13:48:21 in `Asia/Tehran`. It is calculated as a calendrical fractional age between successive Tehran-time birthdays, so it reaches the next integer exactly at the birthday instant rather than approximating a year as a fixed number of seconds.
 
 ## Important links
 
