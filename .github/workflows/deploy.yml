@@ -1,0 +1,36 @@
+name: Deploy portfolio
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: portfolio-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Assemble static site
+        run: |
+          mkdir -p dist
+          cp index.html app.js styles.css dist/
+          touch dist/.nojekyll
+          if [ -d qbar ]; then cp -R qbar dist/qbar; fi
+          if [ -d path-follower ]; then cp -R path-follower dist/path-follower; fi
+
+      - name: Publish gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
