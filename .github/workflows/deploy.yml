@@ -20,19 +20,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Assemble static site
-        run: |
-          mkdir -p dist
-          cp index.html app.js styles.css dist/
-          touch dist/.nojekyll
-          if [ -d qbar ]; then
-            mkdir -p dist/qbar
-            rsync -a --exclude='.git' qbar/ dist/qbar/
-          fi
-          if [ -d path-follower ]; then
-            mkdir -p dist/path-follower
-            rsync -a --exclude='.git' path-follower/ dist/path-follower/
-          fi
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build with Bun
+        run: bun run build
 
       - name: Publish gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
