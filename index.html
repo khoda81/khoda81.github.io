@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#080b10" />
+  <meta name="description" content="Mahdi Khodabandeh — ML/RL, compression, information theory, systems, and interactive visualizations." />
+  <meta property="og:title" content="Mahdi Khodabandeh — bits, models, systems" />
+  <meta property="og:description" content="ML/RL, compression, information theory, systems, and live visualizations." />
+  <title>Mahdi Khodabandeh — bits, models, systems</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <nav class="nav shell">
+    <a class="brand" href="#top" aria-label="Home">MK<span class="slash">/</span>bits</a>
+    <div class="nav-links">
+      <a href="#work">work</a>
+      <a href="#lab">live lab</a>
+      <a href="#systems">systems</a>
+      <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">github ↗</a>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section class="hero shell">
+      <div class="hero-copy">
+        <p class="eyebrow">MAHDI KHODABANDEH · ML / RL / SYSTEMS</p>
+        <h1>I build systems that <em>spend bits carefully.</em></h1>
+        <p class="lede">Compression, information theory, learning algorithms, market microstructure, and the visualization machinery that makes their internal state visible.</p>
+        <div class="hero-links">
+          <a class="primary" href="#work">decode portfolio ↓</a>
+          <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">github.com/khoda81 ↗</a>
+        </div>
+      </div>
+
+      <div class="hero-instrument">
+        <canvas id="hero-canvas" aria-label="Animated probability distribution and arithmetic coding interval"></canvas>
+        <div class="instrument-readout">
+          <span>interval <b id="interval">0…1</b></span>
+          <span>surprisal <b><span id="nats">0</span> nat</b></span>
+          <span><b><span id="bits">0</span> bit</b></span>
+        </div>
+      </div>
+
+      <div class="telemetry" aria-label="Live page telemetry">
+        <div><span>AGE</span><strong>24.???????????? y</strong><small>exact birth epoch needed</small></div>
+        <div><span>UPTIME</span><strong id="uptime">0.000000 s</strong><small>page-local clock</small></div>
+        <div><span>FRAME</span><strong id="frame">0</strong><small><span id="fps">0</span> fps smoothed</small></div>
+        <div><span>POINTER</span><strong id="pointer">0,0 · 0 px/s</strong><small>position · speed</small></div>
+        <div><span>SCROLL</span><strong id="scroll">0 · 0 px/s</strong><small>position · velocity</small></div>
+      </div>
+    </section>
+
+    <section class="equation-band">
+      <div class="shell equation-grid">
+        <div><span class="equation-label">SURPRISAL</span><strong>I(x) = −ln p(x)</strong><small>nats</small></div>
+        <div><span class="equation-label">CHANGE OF BASE</span><strong>I₂(x) = I(x) / ln 2</strong><small>bits</small></div>
+        <div><span class="equation-label">CODE LENGTH</span><strong>L ≈ −log₂ p</strong><small>probability becomes space</small></div>
+      </div>
+    </section>
+
+    <section id="work" class="section shell">
+      <header class="section-heading">
+        <div><p class="eyebrow">SELECTED SIGNALS / 01</p><h2>Things that are better <em>watched</em> than described.</h2></div>
+        <p>Every project keeps its real GitHub URL beside it. Live deployments get an explicit launch link.</p>
+      </header>
+
+      <article class="feature-card chronickle-card">
+        <div class="feature-copy">
+          <div class="project-topline"><span>LIVE · MARKET + NEWS</span><span>Δlog(price)</span></div>
+          <h3>Chronickle</h3>
+          <p>A multi-source market timeline with price heatmaps, a shared time axis, data-acquisition telemetry, retries, sockets, and real-world news events.</p>
+          <div class="actions">
+            <a class="primary" href="https://khoda81.github.io/chronickle/" target="_blank" rel="noreferrer">open live ↗</a>
+            <a href="https://github.com/khoda81/chronickle" target="_blank" rel="noreferrer">source ↗</a>
+          </div>
+        </div>
+        <div class="live-frame-wrap">
+          <div class="live-frame-header"><span>khoda81.github.io/chronickle</span><span class="pulse">● live</span></div>
+          <iframe title="Chronickle live preview" src="https://khoda81.github.io/chronickle/" loading="lazy"></iframe>
+        </div>
+      </article>
+
+      <div id="featured-projects" class="project-grid"></div>
+    </section>
+
+    <section id="lab" class="section lab-section">
+      <div class="shell">
+        <header class="section-heading">
+          <div><p class="eyebrow">INFORMATION LAB / 02</p><h2>Probability is just code length waiting to happen.</h2></div>
+          <p>The visual language is shared with the compression work: density, quantiles, intervals, surprisal, and accumulated code length.</p>
+        </header>
+
+        <div class="lab-grid">
+          <a class="lab-panel qbar" href="https://khoda81.github.io/qbar/" target="_blank" rel="noreferrer">
+            <span class="project-topline"><span>QBAR</span><span>interactive ↗</span></span>
+            <div class="distribution-art" aria-hidden="true">
+              <svg viewBox="0 0 600 230" preserveAspectRatio="none">
+                <path d="M0,205 C55,201 88,185 124,153 C165,117 177,39 238,42 C292,45 298,173 357,183 C414,193 436,87 485,81 C534,75 547,179 600,191" />
+                <line x1="0" y1="205" x2="600" y2="205" />
+                <line x1="238" y1="20" x2="238" y2="215" class="dash" />
+              </svg>
+            </div>
+            <strong>pdf → cdf → quantile → geometry</strong>
+            <small>Open the actual browser experiment.</small>
+          </a>
+
+          <div class="lab-panel coder-panel">
+            <span class="project-topline"><span>ARITHMETIC CODER</span><span>interval</span></span>
+            <div class="coder-stack" aria-label="Arithmetic coding interval narrowing illustration">
+              <div style="--l:0%;--w:100%"><b>Σ</b><span>1.000000</span></div>
+              <div style="--l:9%;--w:61%"><b>A</b><span>0.610000</span></div>
+              <div style="--l:29%;--w:27%"><b>R</b><span>0.164700</span></div>
+              <div style="--l:36%;--w:13%"><b>I</b><span>0.021411</span></div>
+              <div style="--l:40%;--w:6%"><b>T</b><span>0.001285</span></div>
+            </div>
+            <strong>symbols carve [0,1) into a message</strong>
+            <small>Same object, two views: probability mass and eventual bits.</small>
+          </div>
+
+          <a class="lab-panel" href="https://github.com/khoda81/arithmetipy" target="_blank" rel="noreferrer">
+            <span class="project-topline"><span>ARITHMETIPY</span><span>Rust → Python ↗</span></span>
+            <div class="bitstream" aria-hidden="true">01100110100111001010110100101110<span>0110</span>001101</div>
+            <strong>streaming arithmetic coding</strong>
+            <small>32-bit encoder / decoder implemented in Rust, exposed through PyO3.</small>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="systems" class="section shell">
+      <header class="section-heading">
+        <div><p class="eyebrow">UNDER THE PIXELS / 03</p><h2>Data structures, compression, search, and the machinery underneath.</h2></div>
+        <p>Less spectacle here; more of the reasons the spectacle can stay responsive.</p>
+      </header>
+      <div id="systems-list" class="systems-list"></div>
+    </section>
+
+    <section class="section closing">
+      <div class="shell closing-grid">
+        <div><p class="eyebrow">END OF STREAM</p><h2>Still compressing.</h2></div>
+        <div class="closing-links">
+          <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">GitHub ↗</a>
+          <a href="https://www.linkedin.com/in/mahdi-khodabandeh-681037249" target="_blank" rel="noreferrer">LinkedIn ↗</a>
+          <a href="https://twitter.com/axiom_the_ai" target="_blank" rel="noreferrer">X / Twitter ↗</a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
