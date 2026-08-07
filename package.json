@@ -2,8 +2,10 @@
   "name": "khoda81-portfolio",
   "version": "2.0.0",
   "private": true,
-  "description": "Dependency-free information-theory portfolio for khoda81.github.io",
+  "description": "Information-theory portfolio for khoda81.github.io",
   "scripts": {
-    "dev": "python3 -m http.server 5173"
+    "dev": "bun ./index.html",
+    "build": "rm -rf dist && bun build ./index.html --outdir ./dist --production && touch dist/.nojekyll && cp -R qbar dist/qbar && cp -R path-follower dist/path-follower",
+    "preview": "bun ./dist/index.html"
   }
 }
