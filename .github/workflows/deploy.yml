@@ -25,8 +25,14 @@ jobs:
           mkdir -p dist
           cp index.html app.js styles.css dist/
           touch dist/.nojekyll
-          if [ -d qbar ]; then cp -R qbar dist/qbar; fi
-          if [ -d path-follower ]; then cp -R path-follower dist/path-follower; fi
+          if [ -d qbar ]; then
+            mkdir -p dist/qbar
+            rsync -a --exclude='.git' qbar/ dist/qbar/
+          fi
+          if [ -d path-follower ]; then
+            mkdir -p dist/path-follower
+            rsync -a --exclude='.git' path-follower/ dist/path-follower/
+          fi
 
       - name: Publish gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
