@@ -5,7 +5,7 @@
   "description": "Information-theory portfolio for khoda81.github.io",
   "scripts": {
     "dev": "bun ./index.html",
-    "build": "rm -rf dist && bun build ./index.html --outdir ./dist --production && touch dist/.nojekyll && cp -R qbar dist/qbar && cp -R path-follower dist/path-follower",
+    "build": "rm -rf dist && bun build ./index.html --outdir ./dist --production && touch dist/.nojekyll && mkdir -p dist/qbar dist/path-follower && rsync -a --exclude='.git' qbar/ dist/qbar/ && rsync -a --exclude='.git' path-follower/ dist/path-follower/",
     "preview": "bun ./dist/index.html"
   }
 }
