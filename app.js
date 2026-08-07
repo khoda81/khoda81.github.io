@@ -91,8 +91,51 @@ projects.slice(5).forEach((project, i) => {
   systems.append(article);
 });
 
+const TEHRAN_TIME_ZONE = 'Asia/Tehran';
+const BIRTH = { year: 2002, month: 8, day: 13, hour: 13, minute: 48, second: 21 };
+const tehranFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: TEHRAN_TIME_ZONE,
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+  hourCycle: 'h23'
+});
+
+function tehranParts(epochMs) {
+  return Object.fromEntries(
+    tehranFormatter.formatToParts(new Date(epochMs))
+      .filter(part => part.type !== 'literal')
+      .map(part => [part.type, Number(part.value)])
+  );
+}
+
+function tehranLocalEpoch(year, month, day, hour, minute, second) {
+  const targetAsUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  let guess = targetAsUtc;
+  for (let i = 0; i < 4; i += 1) {
+    const local = tehranParts(guess);
+    const representedAsUtc = Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute, local.second);
+    const correction = targetAsUtc - representedAsUtc;
+    guess += correction;
+    if (Math.abs(correction) < 1) break;
+  }
+  return guess;
+}
+
+function fractionalAge(epochMs) {
+  const localNow = tehranParts(epochMs);
+  let anniversaryYear = localNow.year;
+  let previousBirthday = tehranLocalEpoch(anniversaryYear, BIRTH.month, BIRTH.day, BIRTH.hour, BIRTH.minute, BIRTH.second);
+  if (epochMs < previousBirthday) {
+    anniversaryYear -= 1;
+    previousBirthday = tehranLocalEpoch(anniversaryYear, BIRTH.month, BIRTH.day, BIRTH.hour, BIRTH.minute, BIRTH.second);
+  }
+  const nextBirthday = tehranLocalEpoch(anniversaryYear + 1, BIRTH.month, BIRTH.day, BIRTH.hour, BIRTH.minute, BIRTH.second);
+  const completedYears = anniversaryYear - BIRTH.year;
+  return completedYears + (epochMs - previousBirthday) / (nextBirthday - previousBirthday);
+}
+
 const canvas = document.querySelector('#hero-canvas');
-const nodes = Object.fromEntries(['fps','frame','uptime','pointer','scroll','nats','bits','interval'].map(id => [id, document.querySelector(`#${id}`)]));
+const nodes = Object.fromEntries(['age','fps','frame','uptime','pointer','scroll','nats','bits','interval'].map(id => [id, document.querySelector(`#${id}`)]));
 const startedAt = performance.now();
 let pointerX = 0, pointerY = 0, pointerSpeed = 0, lastPointerT = performance.now();
 let lastScrollY = window.scrollY, scrollVelocity = 0, lastScrollT = performance.now();
@@ -181,6 +224,7 @@ function tick(now) {
   const chosenP = .04 + .92 * (.5 + .5 * Math.sin(elapsed * .63 + .8));
   const surprisalNats = -Math.log(chosenP), surprisalBits = surprisalNats / Math.LN2;
 
+  nodes.age.textContent = `${fractionalAge(Date.now()).toFixed(12)} y`;
   nodes.fps.textContent = smoothFps.toFixed(1);
   nodes.frame.textContent = frame.toLocaleString('en-US');
   nodes.uptime.textContent = `${elapsed.toFixed(6)} s`;
