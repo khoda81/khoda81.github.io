@@ -4,8 +4,8 @@
   "private": true,
   "description": "Information-theory portfolio for khoda81.github.io",
   "scripts": {
-    "dev": "bun ./index.html",
+    "dev": "bun ./scripts/dev.ts",
     "build": "bun ./scripts/build.ts",
-    "preview": "bun ./dist/index.html"
+    "preview": "cd dist && bun ../scripts/dev.ts"
   }
 }
