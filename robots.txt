@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://khoda81.github.io/sitemap.xml
+Sitemap: https://khoda81.github.io/sitemap.txt
