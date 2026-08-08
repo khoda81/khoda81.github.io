@@ -19,8 +19,13 @@ if (!result.success) {
 
 writeFileSync(`${outdir}/.nojekyll`, '');
 
+// Static crawl/discovery files are not Bun entrypoints, so copy them verbatim.
+for (const file of ['robots.txt', 'sitemap.xml']) {
+  if (existsSync(file)) cpSync(file, `${outdir}/${file}`);
+}
+
 // QBar is the current demo supplied with the quantile-rasterizer project.
-// Keep qbar-demo/ for the embedded hero and mirror it to /qbar/ for the public demo URL.
+// Keep qbar-demo/ for the embedded component and mirror it to /qbar/ for the public demo URL.
 if (existsSync('qbar-demo')) {
   for (const destination of [`${outdir}/qbar-demo`, `${outdir}/qbar`]) {
     mkdirSync(destination, { recursive: true });
