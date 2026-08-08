@@ -9,6 +9,15 @@
   <meta property="og:description" content="ML/RL, compression, information theory, systems, and live visualizations." />
   <title>Mahdi Khodabandeh — bits, models, systems</title>
   <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .qbar-hero-shell { border: 1px solid var(--line); background: #080b10; overflow: hidden; }
+    .qbar-hero-shell .live-frame-header { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+    .qbar-hero-frame { width: 100%; height: min(53vh, 560px); min-height: 390px; display: block; border: 0; background: #090b10; }
+    .qbar-hero-note { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); font: 500 10px/1.4 var(--mono); color: var(--muted); }
+    .qbar-hero-note b { color: #ced8e6; font-weight: 600; }
+    .qbar-hero-note a { color: var(--green); }
+    @media (max-width: 720px) { .qbar-hero-frame { min-height: 360px; height: 52vh; } .qbar-hero-note { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -36,11 +45,13 @@
       </div>
 
       <div class="hero-instrument">
-        <canvas id="hero-canvas" aria-label="Animated probability distribution and arithmetic coding interval"></canvas>
-        <div class="instrument-readout">
-          <span>interval <b id="interval">0…1</b></span>
-          <span>surprisal <b><span id="nats">0</span> nat</b></span>
-          <span><b><span id="bits">0</span> bit</b></span>
+        <div class="qbar-hero-shell">
+          <div class="live-frame-header"><span>qbar / live quantile raster</span><span class="pulse">● simulated telemetry</span></div>
+          <iframe class="qbar-hero-frame" title="QBar live quantile rasterizer" src="./qbar-demo/index.html?embed=fleet" loading="eager"></iframe>
+          <div class="qbar-hero-note">
+            <span><b>Probability chooses position.</b> Human values become ticks; unstable ticks dissolve as uncertainty widens.</span>
+            <a href="./qbar/" target="_blank" rel="noreferrer">open full QBar demo ↗</a>
+          </div>
         </div>
       </div>
 
@@ -90,11 +101,11 @@
       <div class="shell">
         <header class="section-heading">
           <div><p class="eyebrow">INFORMATION LAB / 02</p><h2>Probability is just code length waiting to happen.</h2></div>
-          <p>The visual language is shared with the compression work: density, quantiles, intervals, surprisal, and accumulated code length.</p>
+          <p>The visual language is shared with the compression work: quantiles, intervals, surprisal, and accumulated code length.</p>
         </header>
 
         <div class="lab-grid">
-          <a class="lab-panel qbar" href="https://khoda81.github.io/qbar/" target="_blank" rel="noreferrer">
+          <a class="lab-panel qbar" href="./qbar/" target="_blank" rel="noreferrer">
             <span class="project-topline"><span>QBAR</span><span>interactive ↗</span></span>
             <div class="distribution-art" aria-hidden="true">
               <svg viewBox="0 0 600 230" preserveAspectRatio="none">
@@ -103,12 +114,12 @@
                 <line x1="238" y1="20" x2="238" y2="215" class="dash" />
               </svg>
             </div>
-            <strong>pdf → cdf → quantile → geometry</strong>
-            <small>Open the actual browser experiment.</small>
+            <strong>pixel-resolution quantile rasterization</strong>
+            <small>Every CSS pixel owns equal probability mass. Tick stability emerges from the local value range.</small>
           </a>
 
           <div class="lab-panel coder-panel">
-            <span class="project-topline"><span>ARITHMETIC CODER</span><span>interval</span></span>
+            <span class="project-topline"><span>ARITHMETIC CODER</span><span>one message</span></span>
             <div class="coder-stack" aria-label="Arithmetic coding interval narrowing illustration">
               <div style="--l:0%;--w:100%"><b>Σ</b><span>1.000000</span></div>
               <div style="--l:9%;--w:61%"><b>A</b><span>0.610000</span></div>
@@ -116,8 +127,8 @@
               <div style="--l:36%;--w:13%"><b>I</b><span>0.021411</span></div>
               <div style="--l:40%;--w:6%"><b>T</b><span>0.001285</span></div>
             </div>
-            <strong>symbols carve [0,1) into a message</strong>
-            <small>Same object, two views: probability mass and eventual bits.</small>
+            <strong>symbols carve one nested interval</strong>
+            <small>No mysterious resets here: a new [0,1) means a new message.</small>
           </div>
 
           <a class="lab-panel" href="https://github.com/khoda81/arithmetipy" target="_blank" rel="noreferrer">

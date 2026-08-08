@@ -19,11 +19,20 @@ if (!result.success) {
 
 writeFileSync(`${outdir}/.nojekyll`, '');
 
-for (const demo of ['qbar', 'path-follower']) {
-  if (!existsSync(demo)) continue;
-  const destination = `${outdir}/${demo}`;
+// QBar is the current demo supplied with the quantile-rasterizer project.
+// Keep qbar-demo/ for the embedded hero and mirror it to /qbar/ for the public demo URL.
+if (existsSync('qbar-demo')) {
+  for (const destination of [`${outdir}/qbar-demo`, `${outdir}/qbar`]) {
+    mkdirSync(destination, { recursive: true });
+    cpSync('qbar-demo', destination, { recursive: true });
+  }
+}
+
+// Keep the older standalone Path Follower demo at its stable URL.
+if (existsSync('path-follower')) {
+  const destination = `${outdir}/path-follower`;
   mkdirSync(destination, { recursive: true });
-  cpSync(demo, destination, {
+  cpSync('path-follower', destination, {
     recursive: true,
     filter: source => basename(source) !== '.git'
   });
