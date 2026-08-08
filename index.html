@@ -10,6 +10,14 @@
   <title>Mahdi Khodabandeh — bits, models, systems</title>
   <link rel="stylesheet" href="./styles.css" />
   <style>
+    main { position: relative; z-index: 1; }
+    .ambient-math { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; contain: strict; }
+    .ambient-equation { position: absolute; white-space: nowrap; font: 500 clamp(15px, 1.7vw, 27px)/1 var(--mono); letter-spacing: -.045em; color: rgba(113,236,195,.065); will-change: transform; text-shadow: 0 0 26px rgba(113,236,195,.035); }
+    .ambient-equation small { font-size: .46em; letter-spacing: .08em; color: rgba(150,170,198,.55); margin-left: .8em; }
+    .ambient-equation:nth-child(1) { left: 3vw; top: 29vh; }
+    .ambient-equation:nth-child(2) { right: -4vw; top: 56vh; }
+    .ambient-equation:nth-child(3) { left: 17vw; top: 82vh; }
+
     .mirror-shell { border: 1px solid var(--line); background: #080b10; overflow: hidden; }
     .mirror-shell .live-frame-header { padding: 10px 12px; border-bottom: 1px solid var(--line); }
     .mirror-viewport { position: relative; height: min(53vh, 560px); min-height: 390px; overflow: hidden; background: #080b10; }
@@ -30,10 +38,12 @@
     .qbar-method-frame-wrap { flex: 1; min-height: 210px; margin: 24px 0 22px; border: 1px solid var(--line); overflow: hidden; background: #090b10; }
     .qbar-method-frame { width: 100%; height: 100%; min-height: 210px; display: block; border: 0; background: #090b10; pointer-events: none; }
     .qbar-method-panel small { font-size: 12px; }
+    .qbar-demo-link { color: var(--green); }
     .method-flow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; font: 500 9px/1.2 var(--mono); color: #708199; }
     .method-flow span { border: 1px solid var(--line); padding: 5px 7px; }
     .method-flow i { color: var(--green); font-style: normal; align-self: center; }
 
+    html[data-mirror-depth] { scroll-behavior: auto !important; }
     html[data-mirror-depth] .noise { opacity: .018; }
     html[data-mirror-depth] .hero { min-height: 100vh; padding-top: 42px; }
     html[data-mirror-depth] h1 { font-size: clamp(44px, 6.4vw, 92px); }
@@ -41,6 +51,10 @@
     html[data-mirror-depth] .mirror-note { font-size: 9px; }
 
     @media (max-width: 720px) {
+      .ambient-equation { font-size: clamp(14px, 4vw, 19px); color: rgba(113,236,195,.05); }
+      .ambient-equation:nth-child(1) { left: -8vw; top: 34vh; }
+      .ambient-equation:nth-child(2) { right: -28vw; top: 64vh; }
+      .ambient-equation:nth-child(3) { left: 8vw; top: 89vh; }
       .mirror-viewport { min-height: 360px; height: 52vh; }
       .mirror-frame { width: 190%; height: 190%; transform: scale(.5263); }
       .mirror-note { grid-template-columns: 1fr; }
@@ -50,6 +64,11 @@
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
+  <div class="ambient-math" aria-hidden="true">
+    <div class="ambient-equation">I(x) = −ln p(x)<small>nats</small></div>
+    <div class="ambient-equation">I₂(x) = I(x) / ln 2<small>bits</small></div>
+    <div class="ambient-equation">L ≈ −log₂ p<small>probability → space</small></div>
+  </div>
 
   <nav class="nav shell">
     <a class="brand" href="#top" aria-label="Home">MK<span class="slash">/</span>bits</a>
@@ -95,14 +114,6 @@
       </div>
     </section>
 
-    <section class="equation-band">
-      <div class="shell equation-grid">
-        <div><span class="equation-label">SURPRISAL</span><strong>I(x) = −ln p(x)</strong><small>nats</small></div>
-        <div><span class="equation-label">CHANGE OF BASE</span><strong>I₂(x) = I(x) / ln 2</strong><small>bits</small></div>
-        <div><span class="equation-label">CODE LENGTH</span><strong>L ≈ −log₂ p</strong><small>probability becomes space</small></div>
-      </div>
-    </section>
-
     <section id="work" class="section shell">
       <header class="section-heading">
         <div><p class="eyebrow">SELECTED SIGNALS / 01</p><h2>Things that are better <em>watched</em> than described.</h2></div>
@@ -137,12 +148,12 @@
 
         <div class="lab-grid">
           <div class="lab-panel qbar-method-panel" id="qbar-method">
-            <span class="project-topline"><span>QBAR</span><span>Q(p) → pixels</span></span>
+            <span class="project-topline"><span>QBAR</span><a class="qbar-demo-link" href="./qbar/" target="_blank" rel="noreferrer">standalone ↗</a></span>
             <div class="qbar-method-frame-wrap">
               <iframe class="qbar-method-frame" title="QBar quantile rasterizer component" src="./qbar-demo/index.html?embed=fleet" loading="lazy" tabindex="-1"></iframe>
             </div>
             <strong>make uncertainty decide what deserves a pixel</strong>
-            <small>QBar starts from a quantile function, not a fixed axis. It evaluates the probability boundaries at screen resolution, so each pixel column owns equal probability mass. Human-friendly tick candidates are chosen in value space; their opacity comes from how much pixel support that local interval receives. As uncertainty widens, weak ticks fade instead of snapping the scale around.</small>
+            <small>QBar starts from a quantile function, not a fixed axis. It evaluates probability boundaries at screen resolution, so every pixel owns equal probability mass. Human-friendly tick candidates are chosen in value space; opacity comes from how much pixel support that local interval receives. As uncertainty widens, weak ticks fade instead of snapping the scale around.</small>
             <div class="method-flow" aria-hidden="true"><span>p ∈ [0,1]</span><i>→</i><span>Q(p)</span><i>→</i><span>equal-mass pixels</span><i>→</i><span>nice ticks</span><i>→</i><span>visibility</span></div>
           </div>
 
