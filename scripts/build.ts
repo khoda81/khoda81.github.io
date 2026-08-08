@@ -30,7 +30,7 @@ if (!builtIndex.includes('google-site-verification')) {
 writeFileSync(`${outdir}/.nojekyll`, '');
 
 // Static crawl/discovery files are not Bun entrypoints, so copy them verbatim.
-for (const file of ['robots.txt', 'sitemap.xml']) {
+for (const file of ['robots.txt', 'sitemap.xml', 'sitemap.txt']) {
   if (existsSync(file)) cpSync(file, `${outdir}/${file}`);
 }
 
