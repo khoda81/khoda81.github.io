@@ -12,7 +12,7 @@ const projects = [
   {
     name: 'QBar', kind: 'PROBABILITY VISUALIZATION',
     description: 'A pixel-resolution quantile rasterizer: every CSS pixel owns equal probability mass, while human-friendly ticks fade according to local uncertainty.',
-    signal: 'quantile / tick family / visibility', unit: 'Q(p)'
+    demo: './qbar/', signal: 'quantile / tick family / visibility', unit: 'Q(p)'
   },
   {
     name: '2048 Solver', kind: 'RUST + SEARCH',
@@ -94,7 +94,8 @@ projects.slice(5).forEach((project, i) => {
 const pageParams = new URLSearchParams(location.search);
 const parsedMirrorDepth = Number.parseInt(pageParams.get('mirror') ?? '0', 10);
 const mirrorDepth = Number.isFinite(parsedMirrorDepth) ? Math.max(0, parsedMirrorDepth) : 0;
-const MAX_MIRROR_DEPTH = 6;
+const rootViewportWidth = (() => { try { return window.top.innerWidth; } catch { return innerWidth; } })();
+const MAX_MIRROR_DEPTH = rootViewportWidth <= 720 ? 4 : 6;
 const mirrorFrame = document.querySelector('#mirror-frame');
 const mirrorViewport = document.querySelector('#mirror-viewport');
 
@@ -107,28 +108,32 @@ function childMirrorUrl() {
   return `${next.pathname}${next.search}`;
 }
 
-function syncMirrorScroll() {
-  if (!mirrorFrame?.contentWindow) return;
-  try {
-    const child = mirrorFrame.contentWindow;
-    const ownMax = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    const childMax = Math.max(0, child.document.documentElement.scrollHeight - child.innerHeight);
-    child.scrollTo(0, (window.scrollY / ownMax) * childMax);
-  } catch {
-    // Same-origin in production/dev; ignore the short load window before the child is ready.
-  }
-}
-
 if (mirrorFrame && mirrorViewport) {
   if (mirrorDepth >= MAX_MIRROR_DEPTH) {
     mirrorFrame.remove();
     mirrorViewport.classList.add('mirror-terminal');
   } else {
     mirrorFrame.src = childMirrorUrl();
-    mirrorFrame.addEventListener('load', syncMirrorScroll);
-    window.addEventListener('resize', syncMirrorScroll, { passive: true });
   }
 }
+
+function followParentScroll() {
+  if (mirrorDepth === 0 || window.parent === window) return;
+  try {
+    const parentRoot = window.parent.document.documentElement;
+    const parentMax = Math.max(1, parentRoot.scrollHeight - window.parent.innerHeight);
+    const ownMax = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+    const target = clamp01(window.parent.scrollY / parentMax) * ownMax;
+    if (Math.abs(window.scrollY - target) > .75) {
+      document.documentElement.scrollTop = target;
+      document.body.scrollTop = target;
+    }
+  } catch {
+    // Same-origin in normal operation; ignore the brief iframe load window.
+  }
+}
+
+function clamp01(value) { return Math.max(0, Math.min(1, value)); }
 
 const TEHRAN_TIME_ZONE = 'Asia/Tehran';
 const BIRTH = { year: 2002, month: 8, day: 13, hour: 13, minute: 48, second: 21 };
@@ -173,8 +178,9 @@ function fractionalAge(epochMs) {
 }
 
 const nodes = Object.fromEntries(['age','fps','frame','uptime','pointer','scroll'].map(id => [id, document.querySelector(`#${id}`)]));
+const ambientEquations = [...document.querySelectorAll('.ambient-equation')];
 const startedAt = performance.now();
-let pointerX = 0, pointerY = 0, pointerSpeed = 0, lastPointerT = performance.now();
+let pointerX = innerWidth / 2, pointerY = innerHeight / 2, pointerSpeed = 0, lastPointerT = performance.now(), pointerSeen = false;
 let lastScrollY = window.scrollY, scrollVelocity = 0, lastScrollT = performance.now();
 let frame = 0, lastFrame = performance.now(), smoothFps = 60;
 const signalBars = [...document.querySelectorAll('.signal-bars i')];
@@ -185,7 +191,7 @@ window.addEventListener('pointermove', event => {
   const dt = Math.max(1, now - lastPointerT);
   const instant = Math.hypot(event.clientX - pointerX, event.clientY - pointerY) * 1000 / dt;
   pointerSpeed = pointerSpeed * .78 + instant * .22;
-  pointerX = event.clientX; pointerY = event.clientY; lastPointerT = now;
+  pointerX = event.clientX; pointerY = event.clientY; lastPointerT = now; pointerSeen = true;
 }, { passive: true });
 
 window.addEventListener('scroll', () => {
@@ -194,7 +200,6 @@ window.addEventListener('scroll', () => {
   const instant = (window.scrollY - lastScrollY) * 1000 / dt;
   scrollVelocity = scrollVelocity * .72 + instant * .28;
   lastScrollY = window.scrollY; lastScrollT = now;
-  syncMirrorScroll();
 }, { passive: true });
 
 function copyMirrorStateFromParent() {
@@ -215,6 +220,19 @@ function copyMirrorStateFromParent() {
   }
 }
 
+function animateAmbientMath(elapsed) {
+  const maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+  const scrollPhase = window.scrollY / maxScroll - .5;
+  const nx = pointerSeen ? pointerX / Math.max(1, innerWidth) - .5 : Math.sin(elapsed * .13) * .16;
+  const ny = pointerSeen ? pointerY / Math.max(1, innerHeight) - .5 : Math.cos(elapsed * .11) * .12;
+  ambientEquations.forEach((equation, i) => {
+    const dx = nx * (12 + i * 8) + Math.sin(elapsed * (.08 + i * .015) + i * 1.7) * 4;
+    const dy = ny * (9 + i * 6) + scrollPhase * (i % 2 ? 24 : -18) + Math.cos(elapsed * (.07 + i * .012) + i) * 3;
+    const rotation = [-5.5, 4.5, -2.5][i] ?? 0;
+    equation.style.transform = `translate3d(${dx.toFixed(2)}px,${dy.toFixed(2)}px,0) rotate(${rotation}deg)`;
+  });
+}
+
 function tick(now) {
   frame += 1;
   const dt = Math.max(.1, now - lastFrame);
@@ -222,6 +240,7 @@ function tick(now) {
   lastFrame = now;
   const elapsed = (now - startedAt) / 1000;
 
+  followParentScroll();
   const mirrored = copyMirrorStateFromParent();
   if (!mirrored) {
     nodes.age.textContent = `${fractionalAge(Date.now()).toFixed(12)} y`;
@@ -238,6 +257,7 @@ function tick(now) {
     });
   }
 
+  animateAmbientMath(elapsed);
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
