@@ -12,7 +12,7 @@ const projects = [
   {
     name: 'QBar', kind: 'PROBABILITY VISUALIZATION',
     description: 'A pixel-resolution quantile rasterizer: every CSS pixel owns equal probability mass, while human-friendly ticks fade according to local uncertainty.',
-    demo: './qbar/', signal: 'quantile / tick family / visibility', unit: 'Q(p)'
+    signal: 'quantile / tick family / visibility', unit: 'Q(p)'
   },
   {
     name: '2048 Solver', kind: 'RUST + SEARCH',
@@ -91,6 +91,45 @@ projects.slice(5).forEach((project, i) => {
   systems.append(article);
 });
 
+const pageParams = new URLSearchParams(location.search);
+const parsedMirrorDepth = Number.parseInt(pageParams.get('mirror') ?? '0', 10);
+const mirrorDepth = Number.isFinite(parsedMirrorDepth) ? Math.max(0, parsedMirrorDepth) : 0;
+const MAX_MIRROR_DEPTH = 6;
+const mirrorFrame = document.querySelector('#mirror-frame');
+const mirrorViewport = document.querySelector('#mirror-viewport');
+
+if (mirrorDepth > 0) document.documentElement.dataset.mirrorDepth = String(mirrorDepth);
+
+function childMirrorUrl() {
+  const next = new URL(location.href);
+  next.searchParams.set('mirror', String(mirrorDepth + 1));
+  next.hash = '';
+  return `${next.pathname}${next.search}`;
+}
+
+function syncMirrorScroll() {
+  if (!mirrorFrame?.contentWindow) return;
+  try {
+    const child = mirrorFrame.contentWindow;
+    const ownMax = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const childMax = Math.max(0, child.document.documentElement.scrollHeight - child.innerHeight);
+    child.scrollTo(0, (window.scrollY / ownMax) * childMax);
+  } catch {
+    // Same-origin in production/dev; ignore the short load window before the child is ready.
+  }
+}
+
+if (mirrorFrame && mirrorViewport) {
+  if (mirrorDepth >= MAX_MIRROR_DEPTH) {
+    mirrorFrame.remove();
+    mirrorViewport.classList.add('mirror-terminal');
+  } else {
+    mirrorFrame.src = childMirrorUrl();
+    mirrorFrame.addEventListener('load', syncMirrorScroll);
+    window.addEventListener('resize', syncMirrorScroll, { passive: true });
+  }
+}
+
 const TEHRAN_TIME_ZONE = 'Asia/Tehran';
 const BIRTH = { year: 2002, month: 8, day: 13, hour: 13, minute: 48, second: 21 };
 const tehranFormatter = new Intl.DateTimeFormat('en-US', {
@@ -141,6 +180,7 @@ let frame = 0, lastFrame = performance.now(), smoothFps = 60;
 const signalBars = [...document.querySelectorAll('.signal-bars i')];
 
 window.addEventListener('pointermove', event => {
+  if (mirrorDepth > 0) return;
   const now = performance.now();
   const dt = Math.max(1, now - lastPointerT);
   const instant = Math.hypot(event.clientX - pointerX, event.clientY - pointerY) * 1000 / dt;
@@ -154,7 +194,26 @@ window.addEventListener('scroll', () => {
   const instant = (window.scrollY - lastScrollY) * 1000 / dt;
   scrollVelocity = scrollVelocity * .72 + instant * .28;
   lastScrollY = window.scrollY; lastScrollT = now;
+  syncMirrorScroll();
 }, { passive: true });
+
+function copyMirrorStateFromParent() {
+  if (mirrorDepth === 0 || window.parent === window) return false;
+  try {
+    for (const id of Object.keys(nodes)) {
+      const source = window.parent.document.querySelector(`#${id}`);
+      if (source && nodes[id]) nodes[id].textContent = source.textContent;
+    }
+    const parentBars = window.parent.document.querySelectorAll('.signal-bars i');
+    signalBars.forEach((bar, i) => {
+      const source = parentBars[i];
+      if (source) bar.style.height = source.style.height || getComputedStyle(source).height;
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function tick(now) {
   frame += 1;
@@ -163,18 +222,21 @@ function tick(now) {
   lastFrame = now;
   const elapsed = (now - startedAt) / 1000;
 
-  nodes.age.textContent = `${fractionalAge(Date.now()).toFixed(12)} y`;
-  nodes.fps.textContent = smoothFps.toFixed(1);
-  nodes.frame.textContent = frame.toLocaleString('en-US');
-  nodes.uptime.textContent = `${elapsed.toFixed(6)} s`;
-  nodes.pointer.textContent = `${Math.round(pointerX)},${Math.round(pointerY)} · ${pointerSpeed.toFixed(0)} px/s`;
-  nodes.scroll.textContent = `${window.scrollY.toFixed(0)} · ${scrollVelocity.toFixed(0)} px/s`;
+  const mirrored = copyMirrorStateFromParent();
+  if (!mirrored) {
+    nodes.age.textContent = `${fractionalAge(Date.now()).toFixed(12)} y`;
+    nodes.fps.textContent = smoothFps.toFixed(1);
+    nodes.frame.textContent = frame.toLocaleString('en-US');
+    nodes.uptime.textContent = `${elapsed.toFixed(6)} s`;
+    nodes.pointer.textContent = `${Math.round(pointerX)},${Math.round(pointerY)} · ${pointerSpeed.toFixed(0)} px/s`;
+    nodes.scroll.textContent = `${window.scrollY.toFixed(0)} · ${scrollVelocity.toFixed(0)} px/s`;
 
-  signalBars.forEach((bar, i) => {
-    const base = 20 + ((i * 29) % 54);
-    const motion = 14 * Math.sin(elapsed * (0.7 + (i % 5) * 0.08) + i * 0.73);
-    bar.style.height = `${Math.max(8, Math.min(94, base + motion))}%`;
-  });
+    signalBars.forEach((bar, i) => {
+      const base = 20 + ((i * 29) % 54);
+      const motion = 14 * Math.sin(elapsed * (0.7 + (i % 5) * 0.08) + i * 0.73);
+      bar.style.height = `${Math.max(8, Math.min(94, base + motion))}%`;
+    });
+  }
 
   requestAnimationFrame(tick);
 }
