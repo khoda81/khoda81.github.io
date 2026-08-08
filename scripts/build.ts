@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 const outdir = 'dist';
 rmSync(outdir, { recursive: true, force: true });
@@ -15,6 +15,16 @@ const result = await Bun.build({
 if (!result.success) {
   for (const log of result.logs) console.error(log);
   process.exit(1);
+}
+
+// Keep Search Console ownership verification in the deployed homepage even if
+// the source HTML is refactored later.
+const verificationTag = '<meta name="google-site-verification" content="-CkYKXDrRcO3qxHEOFu5YRKanGQRRD-nGlTvvqKkei4" />';
+const builtIndexPath = `${outdir}/index.html`;
+let builtIndex = readFileSync(builtIndexPath, 'utf8');
+if (!builtIndex.includes('google-site-verification')) {
+  builtIndex = builtIndex.replace('<head>', `<head>\n  ${verificationTag}`);
+  writeFileSync(builtIndexPath, builtIndex);
 }
 
 writeFileSync(`${outdir}/.nojekyll`, '');
