@@ -10,13 +10,42 @@
   <title>Mahdi Khodabandeh — bits, models, systems</title>
   <link rel="stylesheet" href="./styles.css" />
   <style>
-    .qbar-hero-shell { border: 1px solid var(--line); background: #080b10; overflow: hidden; }
-    .qbar-hero-shell .live-frame-header { padding: 10px 12px; border-bottom: 1px solid var(--line); }
-    .qbar-hero-frame { width: 100%; height: min(53vh, 560px); min-height: 390px; display: block; border: 0; background: #090b10; }
-    .qbar-hero-note { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); font: 500 10px/1.4 var(--mono); color: var(--muted); }
-    .qbar-hero-note b { color: #ced8e6; font-weight: 600; }
-    .qbar-hero-note a { color: var(--green); }
-    @media (max-width: 720px) { .qbar-hero-frame { min-height: 360px; height: 52vh; } .qbar-hero-note { grid-template-columns: 1fr; } }
+    .mirror-shell { border: 1px solid var(--line); background: #080b10; overflow: hidden; }
+    .mirror-shell .live-frame-header { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+    .mirror-viewport { position: relative; height: min(53vh, 560px); min-height: 390px; overflow: hidden; background: #080b10; }
+    .mirror-frame {
+      position: absolute; inset: 0 auto auto 0; width: 172.5%; height: 172.5%; border: 0; display: block;
+      transform: scale(.58); transform-origin: 0 0; pointer-events: none; background: #080b10;
+    }
+    .mirror-viewport::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      box-shadow: inset 0 0 80px rgba(8,11,16,.28); border: 1px solid rgba(113,236,195,.06);
+    }
+    .mirror-note { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); font: 500 10px/1.4 var(--mono); color: var(--muted); }
+    .mirror-note b { color: #ced8e6; font-weight: 600; }
+    .mirror-note span:last-child { color: var(--green); }
+    .mirror-terminal::before { content: '↘  ↘  ↘'; position: absolute; inset: 0; display: grid; place-items: center; color: rgba(113,236,195,.35); font: 500 28px/1 var(--mono); letter-spacing: .8em; }
+
+    .qbar-method-panel { grid-column: span 1; }
+    .qbar-method-frame-wrap { flex: 1; min-height: 210px; margin: 24px 0 22px; border: 1px solid var(--line); overflow: hidden; background: #090b10; }
+    .qbar-method-frame { width: 100%; height: 100%; min-height: 210px; display: block; border: 0; background: #090b10; pointer-events: none; }
+    .qbar-method-panel small { font-size: 12px; }
+    .method-flow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; font: 500 9px/1.2 var(--mono); color: #708199; }
+    .method-flow span { border: 1px solid var(--line); padding: 5px 7px; }
+    .method-flow i { color: var(--green); font-style: normal; align-self: center; }
+
+    html[data-mirror-depth] .noise { opacity: .018; }
+    html[data-mirror-depth] .hero { min-height: 100vh; padding-top: 42px; }
+    html[data-mirror-depth] h1 { font-size: clamp(44px, 6.4vw, 92px); }
+    html[data-mirror-depth] .lede { font-size: clamp(15px, 1.3vw, 20px); }
+    html[data-mirror-depth] .mirror-note { font-size: 9px; }
+
+    @media (max-width: 720px) {
+      .mirror-viewport { min-height: 360px; height: 52vh; }
+      .mirror-frame { width: 190%; height: 190%; transform: scale(.5263); }
+      .mirror-note { grid-template-columns: 1fr; }
+      .qbar-method-panel { grid-column: auto; }
+    }
   </style>
 </head>
 <body>
@@ -45,12 +74,14 @@
       </div>
 
       <div class="hero-instrument">
-        <div class="qbar-hero-shell">
-          <div class="live-frame-header"><span>qbar / live quantile raster</span><span class="pulse">● simulated telemetry</span></div>
-          <iframe class="qbar-hero-frame" title="QBar live quantile rasterizer" src="./qbar-demo/index.html?embed=fleet" loading="eager"></iframe>
-          <div class="qbar-hero-note">
-            <span><b>Probability chooses position.</b> Human values become ticks; unstable ticks dissolve as uncertainty widens.</span>
-            <a href="./qbar/" target="_blank" rel="noreferrer">open full QBar demo ↗</a>
+        <div class="mirror-shell">
+          <div class="live-frame-header"><span>this page / live mirror</span><span class="pulse">● same state</span></div>
+          <div class="mirror-viewport" id="mirror-viewport">
+            <iframe id="mirror-frame" class="mirror-frame" title="Recursive live mirror of this portfolio" aria-hidden="true" tabindex="-1"></iframe>
+          </div>
+          <div class="mirror-note">
+            <span><b>The page observes itself.</b> Scroll state and live telemetry propagate inward; interaction stays outside.</span>
+            <span>picture-in-picture, recursively</span>
           </div>
         </div>
       </div>
@@ -105,18 +136,15 @@
         </header>
 
         <div class="lab-grid">
-          <a class="lab-panel qbar" href="./qbar/" target="_blank" rel="noreferrer">
-            <span class="project-topline"><span>QBAR</span><span>interactive ↗</span></span>
-            <div class="distribution-art" aria-hidden="true">
-              <svg viewBox="0 0 600 230" preserveAspectRatio="none">
-                <path d="M0,205 C55,201 88,185 124,153 C165,117 177,39 238,42 C292,45 298,173 357,183 C414,193 436,87 485,81 C534,75 547,179 600,191" />
-                <line x1="0" y1="205" x2="600" y2="205" />
-                <line x1="238" y1="20" x2="238" y2="215" class="dash" />
-              </svg>
+          <div class="lab-panel qbar-method-panel" id="qbar-method">
+            <span class="project-topline"><span>QBAR</span><span>Q(p) → pixels</span></span>
+            <div class="qbar-method-frame-wrap">
+              <iframe class="qbar-method-frame" title="QBar quantile rasterizer component" src="./qbar-demo/index.html?embed=fleet" loading="lazy" tabindex="-1"></iframe>
             </div>
-            <strong>pixel-resolution quantile rasterization</strong>
-            <small>Every CSS pixel owns equal probability mass. Tick stability emerges from the local value range.</small>
-          </a>
+            <strong>make uncertainty decide what deserves a pixel</strong>
+            <small>QBar starts from a quantile function, not a fixed axis. It evaluates the probability boundaries at screen resolution, so each pixel column owns equal probability mass. Human-friendly tick candidates are chosen in value space; their opacity comes from how much pixel support that local interval receives. As uncertainty widens, weak ticks fade instead of snapping the scale around.</small>
+            <div class="method-flow" aria-hidden="true"><span>p ∈ [0,1]</span><i>→</i><span>Q(p)</span><i>→</i><span>equal-mass pixels</span><i>→</i><span>nice ticks</span><i>→</i><span>visibility</span></div>
+          </div>
 
           <div class="lab-panel coder-panel">
             <span class="project-topline"><span>ARITHMETIC CODER</span><span>one message</span></span>
