@@ -1,310 +1,81 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="A live operations dashboard demonstrating qbar across time, duration, price, recovery, and latency distributions."
-    />
-    <title>qbar — live uncertainty desk</title>
-    <script>
-      document.documentElement.dataset.embed = new URLSearchParams(location.search).get("embed") || "";
-    </script>
-    <style>
-      :root {
-        color-scheme: dark;
-        font-family:
-          Inter,
-          ui-sans-serif,
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          sans-serif;
-        font-synthesis: none;
-        --background: #090b10;
-        --surface: rgba(18, 22, 31, 0.88);
-        --surface-raised: rgba(25, 30, 42, 0.92);
-        --border: rgba(255, 255, 255, 0.09);
-        --muted: #929bab;
-        --text: #edf2f8;
-        --cyan: #76d7ff;
-        --green: #8de8b2;
-        --amber: #ffca7a;
-        --violet: #c9a7ff;
-        --pink: #ff9eb5;
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>qbar — quantile raster</title>
+  <script>document.documentElement.dataset.embed = new URLSearchParams(location.search).get('embed') || '';</script>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;--bg:#090b10;--panel:#0e131b;--line:rgba(145,166,196,.17);--text:#d8e2f0;--muted:#7f8ea3;--green:#71ecc3;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:radial-gradient(circle at 75% 0,rgba(113,236,195,.08),transparent 42%),var(--bg);color:var(--text)}
+    .shell{width:min(960px,calc(100% - 32px));margin:auto;padding:40px 0 48px}.chrome{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:end;margin-bottom:28px}.eyebrow{font:600 10px/1 var(--mono);letter-spacing:.12em;color:var(--green);margin:0 0 10px}.chrome h1{font-size:clamp(36px,6vw,68px);letter-spacing:-.055em;line-height:.94;margin:0}.chrome p{max-width:56ch;color:var(--muted);line-height:1.55}.control{border:1px solid var(--line);padding:12px 14px;min-width:210px;font:500 10px/1.3 var(--mono);color:var(--muted)} input{width:100%;accent-color:var(--green);margin-top:9px}
+    .fleet{border:1px solid var(--line);background:rgba(13,18,26,.82);padding:18px}.fleet-head{display:flex;justify-content:space-between;gap:18px;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--line);font:500 10px/1.2 var(--mono);color:var(--muted)}.fleet-head b{color:var(--green);font-weight:600}.services{display:grid}.service{display:grid;grid-template-columns:132px minmax(160px,1fr) 70px;gap:16px;align-items:center;min-height:78px;border-bottom:1px solid var(--line)}.service:last-child{border-bottom:0}.name{font:600 11px/1.25 var(--mono)}.name small{display:block;color:var(--muted);font-weight:500;margin-top:5px}.p95{text-align:right;font:600 11px/1 var(--mono);color:#cbd7e6}.method{display:grid;grid-template-columns:repeat(5,auto);justify-content:start;gap:7px;align-items:center;margin-top:18px;font:500 9px/1.2 var(--mono);color:#6f8096}.method span{border:1px solid var(--line);padding:6px 8px}.method i{font-style:normal;color:var(--green)}
+    q-bar{display:block;width:100%;height:58px;color:var(--bar,#71ecc3);font:500 9px/1 var(--mono)}
+    html[data-embed="fleet"] body{background:#090b10;min-height:0}html[data-embed="fleet"] .shell{width:100%;padding:0}html[data-embed="fleet"] .chrome,html[data-embed="fleet"] .method{display:none}html[data-embed="fleet"] .fleet{border:0;padding:10px 12px;background:#090b10}html[data-embed="fleet"] .fleet-head{padding-bottom:9px}html[data-embed="fleet"] .service{grid-template-columns:92px minmax(120px,1fr) 58px;gap:9px;min-height:46px}html[data-embed="fleet"] q-bar{height:38px}html[data-embed="fleet"] .name,html[data-embed="fleet"] .p95{font-size:8px}
+    @media(max-width:600px){.chrome{grid-template-columns:1fr}.service{grid-template-columns:92px minmax(100px,1fr) 58px;gap:9px}.method{grid-template-columns:1fr}.method i{display:none}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="chrome">
+      <div><p class="eyebrow">QBAR / PIXEL-RESOLUTION QUANTILES</p><h1>Let uncertainty choose the scale.</h1><p>Each screen pixel owns equal probability mass. Value-space ticks survive only when the distribution gives them enough pixel support.</p></div>
+      <label class="control">uncertainty <output id="uout">1.00×</output><input id="uncertainty" type="range" min=".45" max="2.4" step=".01" value="1"></label>
+    </header>
+    <section class="fleet">
+      <div class="fleet-head"><b>service latency forecasts</b><span>P0 → P100 · simulated telemetry</span></div>
+      <div class="services" id="services"></div>
+    </section>
+    <div class="method" aria-hidden="true"><span>p ∈ [0,1]</span><i>→</i><span>Q(p)</span><i>→</i><span>equal-mass pixels</span><i>→</i><span>nice ticks</span><i>→</i><span>visibility</span></div>
+  </main>
+<script type="module">
+const SVG='http://www.w3.org/2000/svg';
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const smoothstep=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t)};
+class DecimalTicks{
+  constructor(m=[1,2,5]){this.m=[...m].sort((a,b)=>b-a)}
+  select(lower,upper){
+    if(!Number.isFinite(lower)||!Number.isFinite(upper)||upper<=lower)return null;
+    const mag=Math.max(Math.abs(lower),Math.abs(upper));
+    for(let e=Math.floor(Math.log10(mag||1))+1;e>=-12;e--){
+      const p=10**e;
+      for(let j=0;j<this.m.length;j++){
+        const spacing=this.m[j]*p, k=Math.floor(upper/spacing), value=k*spacing;
+        if(lower<value&&value<=upper)return{value,spacing,level:e*this.m.length+j};
       }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        background:
-          radial-gradient(
-            circle at 18% 0%,
-            rgba(53, 119, 147, 0.2),
-            transparent 32rem
-          ),
-          radial-gradient(
-            circle at 92% 12%,
-            rgba(123, 72, 157, 0.15),
-            transparent 28rem
-          ),
-          var(--background);
-        color: var(--text);
-        margin: 0;
-        min-height: 100vh;
-      }
-
-      button,
-      input {
-        font: inherit;
-      }
-
-      button {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        color: var(--text);
-        cursor: pointer;
-        padding: 0.62rem 0.95rem;
-      }
-
-      button:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-
-      button:focus-visible,
-      input:focus-visible {
-        outline: 2px solid var(--cyan);
-        outline-offset: 3px;
-      }
-
-      .shell {
-        margin: 0 auto;
-        max-width: 1440px;
-        padding: clamp(1.25rem, 3vw, 3rem);
-      }
-
-      .masthead {
-        align-items: end;
-        display: grid;
-        gap: 2rem;
-        grid-template-columns: minmax(0, 1fr) auto;
-        margin-block-end: 2.25rem;
-      }
-
-      .eyebrow {
-        color: var(--cyan);
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.72rem;
-        letter-spacing: 0.16em;
-        margin: 0 0 0.8rem;
-        text-transform: uppercase;
-      }
-
-      h1 {
-        font-size: clamp(2.5rem, 6vw, 5.75rem);
-        font-weight: 520;
-        letter-spacing: -0.065em;
-        line-height: 0.9;
-        margin: 0;
-        max-width: 12ch;
-      }
-
-      .lede {
-        color: var(--muted);
-        font-size: clamp(1rem, 1.6vw, 1.18rem);
-        line-height: 1.55;
-        margin: 1.25rem 0 0;
-        max-width: 55ch;
-      }
-
-      .controls {
-        align-items: center;
-        background: rgba(15, 18, 26, 0.78);
-        border: 1px solid var(--border);
-        border-radius: 1rem;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.85rem;
-        padding: 0.7rem;
-      }
-
-      .control-range {
-        align-items: center;
-        display: grid;
-        gap: 0.15rem 0.75rem;
-        grid-template-columns: auto minmax(7rem, 11rem) 2.8rem;
-        padding-inline: 0.35rem;
-      }
-
-      .control-range label {
-        color: var(--muted);
-        font-size: 0.76rem;
-        grid-row: 1;
-      }
-
-      .control-range input {
-        accent-color: var(--cyan);
-        grid-column: 2;
-        grid-row: 1;
-      }
-
-      .control-range output {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.76rem;
-        grid-column: 3;
-        grid-row: 1;
-        text-align: right;
-      }
-
-      .simulation-note {
-        align-items: center;
-        color: var(--muted);
-        display: flex;
-        font-size: 0.74rem;
-        gap: 0.5rem;
-        margin: 0.9rem 0 0;
-      }
-
-      .live-dot {
-        animation: pulse 1.8s ease-in-out infinite;
-        background: var(--green);
-        border-radius: 50%;
-        box-shadow: 0 0 0.8rem rgba(141, 232, 178, 0.65);
-        height: 0.45rem;
-        width: 0.45rem;
-      }
-
-      .paused .live-dot {
-        animation: none;
-        background: var(--muted);
-        box-shadow: none;
-      }
-
-      .dashboard {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(12, minmax(0, 1fr));
-      }
-
-      .card {
-        background: linear-gradient(
-          145deg,
-          var(--surface-raised),
-          var(--surface)
-        );
-        border: 1px solid var(--border);
-        border-radius: 1.4rem;
-        box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.18);
-        container-type: inline-size;
-        overflow: hidden;
-        padding: clamp(1.15rem, 2.2vw, 1.65rem);
-        position: relative;
-      }
-
-      .card::before {
-        background: var(--accent);
-        content: "";
-        filter: blur(3.2rem);
-        height: 8rem;
-        opacity: 0.09;
-        position: absolute;
-        right: -3rem;
-        top: -3rem;
-        width: 8rem;
-      }
-
-      .card--connection {
-        --accent: var(--cyan);
-        grid-column: span 5;
-      }
-
-      .card--download {
-        --accent: var(--green);
-        grid-column: span 3;
-      }
-
-      .card--market {
-        --accent: var(--amber);
-        grid-column: span 4;
-      }
-
-      .card--recovery {
-        --accent: var(--violet);
-        grid-column: span 4;
-      }
-
-      .card__header {
-        align-items: start;
-        display: flex;
-        gap: 1rem;
-        justify-content: space-between;
-        position: relative;
-        z-index: 1;
-      }
-
-      .card__kicker {
-        color: var(--muted);
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.68rem;
-        letter-spacing: 0.12em;
-        margin: 0 0 0.45rem;
-        text-transform: uppercase;
-      }
-
-      .card h2 {
-        font-size: 1.02rem;
-        font-weight: 580;
-        margin: 0;
-      }
-
-      .badge {
-        background: color-mix(in srgb, var(--accent) 11%, transparent);
-        border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
-        border-radius: 999px;
-        color: var(--accent);
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.68rem;
-        padding: 0.35rem 0.55rem;
-      }
-
-      .card__content {
-        display: grid;
-        gap: 2rem;
-        grid-template-columns: 4rem minmax(0, 1fr);
-        margin-block-start: 1.5rem;
-        min-inline-size: 0;
-        position: relative;
-        z-index: 1;
-      }
-
-      .card--connection .card__content {
-        grid-template-columns: 4rem minmax(0, 1fr);
-      }
-
-      .reading {
-        align-self: start;
-        min-inline-size: 0;
-        overflow: hidden;
-      }
-
-      .reading__value {
-        font-size: clamp(1.9rem, 3.5vw, 4rem);
-        font-size: clamp(1.9rem, 10cqi, 4rem);
-        font-variant-numeric: tabular-nums;
-        font-weight: 510;
-        letter-spacing: -0.06em;
-        line-height: 0.95;
-        margin: 0;
-        max-inline-size: 100%;
-        white-space: nowrap;
-      }
-
-      .card--connection .reading__value {
-        font-size: clamp(2.1rem, 4vw, 4.4rem);
-        font-size: clamp(2.1rem, 11cqi, 4.4rem);
-�x�
+    }
+    return null;
+  }
+}
+const ticks=new DecimalTicks();
+function rasterize(quantile,width){
+  const boundaries=new Float64Array(width+1);
+  for(let i=0;i<=width;i++)boundaries[i]=quantile(i/width);
+  const out=[];
+  for(let i=0;i<width;i++){
+    const lo=boundaries[i],hi=boundaries[i+1];
+    if(!Number.isFinite(lo)||!Number.isFinite(hi)||hi<=lo)continue;
+    const s=ticks.select(lo,hi);if(!s)continue;
+    const px=s.spacing/(hi-lo), opacity=smoothstep(24,64,px);
+    if(opacity>1/255)out.push({...s,position:i+.5,opacity});
+  }
+  return out;
+}
+class QBar extends HTMLElement{
+  constructor(){super();this.attachShadow({mode:'open'}).innerHTML=`<style>:host{display:block;contain:size layout style}svg{width:100%;height:100%;display:block;overflow:visible}line{stroke:currentColor;vector-effect:non-scaling-stroke}.axis{opacity:.2}text{fill:currentColor;font:inherit;font-variant-numeric:tabular-nums}</style><svg aria-hidden="true"><line class="axis"/><g></g></svg>`;this.svg=this.shadowRoot.querySelector('svg');this.axis=this.shadowRoot.querySelector('.axis');this.g=this.shadowRoot.querySelector('g');this.ro=new ResizeObserver(()=>this.refresh())}
+  connectedCallback(){this.ro.observe(this);this.refresh()}
+  disconnectedCallback(){this.ro.disconnect();if(this.raf)cancelAnimationFrame(this.raf)}
+  refresh(){if(this.raf)return;this.raf=requestAnimationFrame(()=>{this.raf=0;this.render()})}
+  render(){const w=Math.max(1,Math.round(this.getBoundingClientRect().width)),h=Math.max(1,Math.round(this.getBoundingClientRect().height));this.svg.setAttribute('viewBox',`0 0 ${w} ${h}`);Object.assign(this.axis,{x1:{baseVal:{value:0}}});this.axis.setAttribute('x1','0');this.axis.setAttribute('x2',String(w));this.axis.setAttribute('y1','.5');this.axis.setAttribute('y2','.5');this.g.replaceChildren();if(!this.quantile)return;const frag=document.createDocumentFragment();for(const t of rasterize(this.quantile,w)){const group=document.createElementNS(SVG,'g');group.setAttribute('opacity',String(t.opacity));const line=document.createElementNS(SVG,'line');line.setAttribute('x1',t.position);line.setAttribute('x2',t.position);line.setAttribute('y1','.5');line.setAttribute('y2','8.5');const label=document.createElementNS(SVG,'text');label.setAttribute('transform',`translate(${t.position} 12.5) rotate(90)`);label.setAttribute('dominant-baseline','middle');label.textContent=this.formatTick?this.formatTick(t.value):String(Math.round(t.value));group.append(line,label);frag.append(group)}this.g.append(frag)}
+}
+customElements.define('q-bar',QBar);
+const q=(p,m,s)=>p<=0?0:p>=1?Infinity:m*(p/(1-p))**(1/s);
+const defs=[['Search API','fra-1','#ff9eb5',82,.2],['Checkout','ams-2','#76d7ff',138,1.4],['Vector index','hel-1','#c9a7ff',205,2.6],['Media edge','global','#8de8b2',44,3.7]];
+const root=document.querySelector('#services');
+const services=defs.map(([name,region,color,base,phase],i)=>{const row=document.createElement('article');row.className='service';row.innerHTML=`<div class="name">${name}<small>${region}</small></div><q-bar style="--bar:${color};color:${color}"></q-bar><output class="p95">—</output>`;root.append(row);const bar=row.querySelector('q-bar');bar.formatTick=v=>`${Math.round(v)}ms`;return{bar,p95:row.querySelector('.p95'),base,phase,median:base,shape:5}});
+const input=document.querySelector('#uncertainty'),out=document.querySelector('#uout');let uncertainty=1,last=performance.now(),t=0;
+input.addEventListener('input',()=>{uncertainty=+input.value;out.value=`${uncertainty.toFixed(2)}×`});
+function frame(now){t+=Math.min(.1,(now-last)/1000);last=now;for(const s of services){s.median=s.base*(1+.14*Math.sin(t*.72+s.phase)+.05*Math.sin(t*2.1+s.phase));s.shape=Math.max(1.4,7/uncertainty);s.bar.quantile=p=>q(p,s.median,s.shape);s.p95.textContent=`${Math.round(q(.95,s.median,s.shape))} ms`;s.bar.refresh()}requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
