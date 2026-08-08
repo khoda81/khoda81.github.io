@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#080b10" />
+  <meta name="description" content="Mahdi Khodabandeh — ML/RL, compression, information theory, systems, and interactive visualizations." />
+  <meta property="og:title" content="Mahdi Khodabandeh — bits, models, systems" />
+  <meta property="og:description" content="ML/RL, compression, information theory, systems, and live visualizations." />
+  <title>Mahdi Khodabandeh — bits, models, systems</title>
+  
+  <style>
+    .mirror-shell { border: 1px solid var(--line); background: #080b10; overflow: hidden; }
+    .mirror-shell .live-frame-header { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+    .mirror-viewport { position: relative; height: min(53vh, 560px); min-height: 390px; overflow: hidden; background: #080b10; }
+    .mirror-frame {
+      position: absolute; inset: 0 auto auto 0; width: 172.5%; height: 172.5%; border: 0; display: block;
+      transform: scale(.58); transform-origin: 0 0; pointer-events: none; background: #080b10;
+    }
+    .mirror-viewport::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      box-shadow: inset 0 0 80px rgba(8,11,16,.28); border: 1px solid rgba(113,236,195,.06);
+    }
+    .mirror-note { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); font: 500 10px/1.4 var(--mono); color: var(--muted); }
+    .mirror-note b { color: #ced8e6; font-weight: 600; }
+    .mirror-note span:last-child { color: var(--green); }
+    .mirror-terminal::before { content: '↘  ↘  ↘'; position: absolute; inset: 0; display: grid; place-items: center; color: rgba(113,236,195,.35); font: 500 28px/1 var(--mono); letter-spacing: .8em; }
+
+    .qbar-method-panel { grid-column: span 1; }
+    .qbar-method-frame-wrap { flex: 1; min-height: 210px; margin: 24px 0 22px; border: 1px solid var(--line); overflow: hidden; background: #090b10; }
+    .qbar-method-frame { width: 100%; height: 100%; min-height: 210px; display: block; border: 0; background: #090b10; pointer-events: none; }
+    .qbar-method-panel small { font-size: 12px; }
+    .method-flow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; font: 500 9px/1.2 var(--mono); color: #708199; }
+    .method-flow span { border: 1px solid var(--line); padding: 5px 7px; }
+    .method-flow i { color: var(--green); font-style: normal; align-self: center; }
+
+    html[data-mirror-depth] .noise { opacity: .018; }
+    html[data-mirror-depth] .hero { min-height: 100vh; padding-top: 42px; }
+    html[data-mirror-depth] h1 { font-size: clamp(44px, 6.4vw, 92px); }
+    html[data-mirror-depth] .lede { font-size: clamp(15px, 1.3vw, 20px); }
+    html[data-mirror-depth] .mirror-note { font-size: 9px; }
+
+    @media (max-width: 720px) {
+      .mirror-viewport { min-height: 360px; height: 52vh; }
+      .mirror-frame { width: 190%; height: 190%; transform: scale(.5263); }
+      .mirror-note { grid-template-columns: 1fr; }
+      .qbar-method-panel { grid-column: auto; }
+    }
+  </style>
+<link rel="stylesheet" crossorigin href="./chunk-cs17jfag.css"><script type="module" crossorigin src="./chunk-e08x56ne.js"></script></head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <nav class="nav shell">
+    <a class="brand" href="#top" aria-label="Home">MK<span class="slash">/</span>bits</a>
+    <div class="nav-links">
+      <a href="#work">work</a>
+      <a href="#lab">live lab</a>
+      <a href="#systems">systems</a>
+      <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">github ↗</a>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section class="hero shell">
+      <div class="hero-copy">
+        <p class="eyebrow">MAHDI KHODABANDEH · ML / RL / SYSTEMS</p>
+        <h1>I build systems that <em>spend bits carefully.</em></h1>
+        <p class="lede">Compression, information theory, learning algorithms, market microstructure, and the visualization machinery that makes their internal state visible.</p>
+        <div class="hero-links">
+          <a class="primary" href="#work">decode portfolio ↓</a>
+          <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">github.com/khoda81 ↗</a>
+        </div>
+      </div>
+
+      <div class="hero-instrument">
+        <div class="mirror-shell">
+          <div class="live-frame-header"><span>this page / live mirror</span><span class="pulse">● same state</span></div>
+          <div class="mirror-viewport" id="mirror-viewport">
+            <iframe id="mirror-frame" class="mirror-frame" title="Recursive live mirror of this portfolio" aria-hidden="true" tabindex="-1"></iframe>
+          </div>
+          <div class="mirror-note">
+            <span><b>The page observes itself.</b> Scroll state and live telemetry propagate inward; interaction stays outside.</span>
+            <span>picture-in-picture, recursively</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="telemetry" aria-label="Live page telemetry">
+        <div><span>AGE</span><strong id="age">23.000000000000 y</strong><small>Tehran birthday clock</small></div>
+        <div><span>UPTIME</span><strong id="uptime">0.000000 s</strong><small>page-local clock</small></div>
+        <div><span>FRAME</span><strong id="frame">0</strong><small><span id="fps">0</span> fps smoothed</small></div>
+        <div><span>POINTER</span><strong id="pointer">0,0 · 0 px/s</strong><small>position · speed</small></div>
+        <div><span>SCROLL</span><strong id="scroll">0 · 0 px/s</strong><small>position · velocity</small></div>
+      </div>
+    </section>
+
+    <section class="equation-band">
+      <div class="shell equation-grid">
+        <div><span class="equation-label">SURPRISAL</span><strong>I(x) = −ln p(x)</strong><small>nats</small></div>
+        <div><span class="equation-label">CHANGE OF BASE</span><strong>I₂(x) = I(x) / ln 2</strong><small>bits</small></div>
+        <div><span class="equation-label">CODE LENGTH</span><strong>L ≈ −log₂ p</strong><small>probability becomes space</small></div>
+      </div>
+    </section>
+
+    <section id="work" class="section shell">
+      <header class="section-heading">
+        <div><p class="eyebrow">SELECTED SIGNALS / 01</p><h2>Things that are better <em>watched</em> than described.</h2></div>
+        <p>Every project keeps its real GitHub URL beside it. Live deployments get an explicit launch link.</p>
+      </header>
+
+      <article class="feature-card chronickle-card">
+        <div class="feature-copy">
+          <div class="project-topline"><span>LIVE · MARKET + NEWS</span><span>Δlog(price)</span></div>
+          <h3>Chronickle</h3>
+          <p>A multi-source market timeline with price heatmaps, a shared time axis, data-acquisition telemetry, retries, sockets, and real-world news events.</p>
+          <div class="actions">
+            <a class="primary" href="https://khoda81.github.io/chronickle/" target="_blank" rel="noreferrer">open live ↗</a>
+            <a href="https://github.com/khoda81/chronickle" target="_blank" rel="noreferrer">source ↗</a>
+          </div>
+        </div>
+        <div class="live-frame-wrap">
+          <div class="live-frame-header"><span>khoda81.github.io/chronickle</span><span class="pulse">● live</span></div>
+          <iframe title="Chronickle live preview" src="https://khoda81.github.io/chronickle/" loading="lazy"></iframe>
+        </div>
+      </article>
+
+      <div id="featured-projects" class="project-grid"></div>
+    </section>
+
+    <section id="lab" class="section lab-section">
+      <div class="shell">
+        <header class="section-heading">
+          <div><p class="eyebrow">INFORMATION LAB / 02</p><h2>Probability is just code length waiting to happen.</h2></div>
+          <p>The visual language is shared with the compression work: quantiles, intervals, surprisal, and accumulated code length.</p>
+        </header>
+
+        <div class="lab-grid">
+          <div class="lab-panel qbar-method-panel" id="qbar-method">
+            <span class="project-topline"><span>QBAR</span><span>Q(p) → pixels</span></span>
+            <div class="qbar-method-frame-wrap">
+              <iframe class="qbar-method-frame" title="QBar quantile rasterizer component" src="./qbar-demo/index.html?embed=fleet" loading="lazy" tabindex="-1"></iframe>
+            </div>
+            <strong>make uncertainty decide what deserves a pixel</strong>
+            <small>QBar starts from a quantile function, not a fixed axis. It evaluates the probability boundaries at screen resolution, so each pixel column owns equal probability mass. Human-friendly tick candidates are chosen in value space; their opacity comes from how much pixel support that local interval receives. As uncertainty widens, weak ticks fade instead of snapping the scale around.</small>
+            <div class="method-flow" aria-hidden="true"><span>p ∈ [0,1]</span><i>→</i><span>Q(p)</span><i>→</i><span>equal-mass pixels</span><i>→</i><span>nice ticks</span><i>→</i><span>visibility</span></div>
+          </div>
+
+          <div class="lab-panel coder-panel">
+            <span class="project-topline"><span>ARITHMETIC CODER</span><span>one message</span></span>
+            <div class="coder-stack" aria-label="Arithmetic coding interval narrowing illustration">
+              <div style="--l:0%;--w:100%"><b>Σ</b><span>1.000000</span></div>
+              <div style="--l:9%;--w:61%"><b>A</b><span>0.610000</span></div>
+              <div style="--l:29%;--w:27%"><b>R</b><span>0.164700</span></div>
+              <div style="--l:36%;--w:13%"><b>I</b><span>0.021411</span></div>
+              <div style="--l:40%;--w:6%"><b>T</b><span>0.001285</span></div>
+            </div>
+            <strong>symbols carve one nested interval</strong>
+            <small>No mysterious resets here: a new [0,1) means a new message.</small>
+          </div>
+
+          <a class="lab-panel" href="https://github.com/khoda81/arithmetipy" target="_blank" rel="noreferrer">
+            <span class="project-topline"><span>ARITHMETIPY</span><span>Rust → Python ↗</span></span>
+            <div class="bitstream" aria-hidden="true">01100110100111001010110100101110<span>0110</span>001101</div>
+            <strong>streaming arithmetic coding</strong>
+            <small>32-bit encoder / decoder implemented in Rust, exposed through PyO3.</small>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="systems" class="section shell">
+      <header class="section-heading">
+        <div><p class="eyebrow">UNDER THE PIXELS / 03</p><h2>Data structures, compression, search, and the machinery underneath.</h2></div>
+        <p>Less spectacle here; more of the reasons the spectacle can stay responsive.</p>
+      </header>
+      <div id="systems-list" class="systems-list"></div>
+    </section>
+
+    <section class="section closing">
+      <div class="shell closing-grid">
+        <div><p class="eyebrow">END OF STREAM</p><h2>Still compressing.</h2></div>
+        <div class="closing-links">
+          <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">GitHub ↗</a>
+          <a href="https://www.linkedin.com/in/mahdi-khodabandeh-681037249" target="_blank" rel="noreferrer">LinkedIn ↗</a>
+          <a href="https://twitter.com/axiom_the_ai" target="_blank" rel="noreferrer">X / Twitter ↗</a>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+</body>
+</html>
