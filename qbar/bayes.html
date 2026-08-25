@@ -30,9 +30,9 @@
     button:disabled { opacity:.45; cursor:default; }
     select { width:100%; padding:7px 8px; }
     canvas { width:100%; height:auto; display:block; background:#171717; border:1px solid var(--border); border-radius:7px; touch-action:pan-y; }
-    #field { aspect-ratio: 760 / 430; }
-    #predictive { aspect-ratio: 760 / 190; cursor:crosshair; }
-    #qbar { aspect-ratio:760 / 142; }
+    #field { aspect-ratio:760 / 430; }
+    #qbar { aspect-ratio:760 / 104; cursor:crosshair; }
+    .qbar-hint { min-height:18px; margin-top:7px; color:var(--muted); font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; }
     .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin-top:9px; }
     .stat { padding:8px; border-radius:7px; background:#161616; min-width:0; }
     .stat .label { color:var(--muted); font-size:10px; margin-bottom:3px; }
@@ -84,23 +84,18 @@
         <span><i class="swatch" style="background:var(--prior)"></i> prior</span>
       </div>
       <div class="stats">
-        <div class="stat"><div class="label">mode compute</div><div class="value" id="modeMs">—</div></div>
-        <div class="stat"><div class="label">reference compute</div><div class="value" id="refMs">—</div></div>
-        <div class="stat"><div class="label">KL(ref posterior ∥ mode)</div><div class="value" id="posteriorKl">—</div></div>
-        <div class="stat"><div class="label">KL(ref predictive ∥ mode)</div><div class="value" id="predictiveKl">—</div></div>
+        <div class="stat"><div class="label">mode inference</div><div class="value" id="modeMs">—</div></div>
+        <div class="stat"><div class="label">naive replay (if run)</div><div class="value" id="refMs">—</div></div>
+        <div class="stat"><div class="label">KL(exact posterior ∥ mode)</div><div class="value" id="posteriorKl">—</div></div>
+        <div class="stat"><div class="label">KL(exact predictive ∥ mode)</div><div class="value" id="predictiveKl">—</div></div>
       </div>
     </section>
 
     <section class="card">
-      <p class="section-title">Posterior predictive · click/tap to observe x</p>
-      <p class="sub">Reference is faint. Selected method is bright. The curve is sampled in screen bins, not at arbitrary world-space points.</p>
-      <canvas id="predictive" width="760" height="190" aria-label="Posterior predictive distribution"></canvas>
-    </section>
-
-    <section class="card">
-      <p class="section-title">QBar view of the predictive</p>
-      <p class="sub">Both rows use qbar's probability-coordinate idea: ticks live at quantiles, and density decides which labels survive.</p>
-      <canvas id="qbar" width="760" height="142" aria-label="QBar comparison of reference and selected predictive distributions"></canvas>
+      <p class="section-title">Posterior predictive · QBar is the input</p>
+      <p class="sub">Horizontal position is probability p, not x. Tap/click anywhere: the current predictive inverse CDF turns that p into an observation x, then Bayes updates. Orange dots are past observations reprojected into the current predictive.</p>
+      <canvas id="qbar" width="760" height="104" aria-label="Interactive QBar posterior predictive distribution"></canvas>
+      <div id="qbarHint" class="qbar-hint">Tap/click a probability position; QBar converts it through the predictive inverse CDF into the next observation.</div>
     </section>
   </main>
 
