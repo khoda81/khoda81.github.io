@@ -34,13 +34,23 @@ for (const file of ['robots.txt', 'sitemap.xml', 'sitemap.txt']) {
   if (existsSync(file)) cpSync(file, `${outdir}/${file}`);
 }
 
-// QBar is the current demo supplied with the quantile-rasterizer project.
-// Keep qbar-demo/ for the embedded component and mirror it to /qbar/ for the public demo URL.
+// Keep the portfolio-specific embedded QBar demo at its existing stable path.
 if (existsSync('qbar-demo')) {
-  for (const destination of [`${outdir}/qbar-demo`, `${outdir}/qbar`]) {
-    mkdirSync(destination, { recursive: true });
-    cpSync('qbar-demo', destination, { recursive: true });
-  }
+  const destination = `${outdir}/qbar-demo`;
+  mkdirSync(destination, { recursive: true });
+  cpSync('qbar-demo', destination, { recursive: true });
+}
+
+// Publish the standalone qbar-web submodule at /qbar/.
+// The deploy workflow checks out submodules recursively, so this tracks the
+// exact qbar-web commit pinned by the portfolio repository.
+if (existsSync('qbar')) {
+  const destination = `${outdir}/qbar`;
+  mkdirSync(destination, { recursive: true });
+  cpSync('qbar', destination, {
+    recursive: true,
+    filter: source => basename(source) !== '.git'
+  });
 }
 
 // Keep the older standalone Path Follower demo at its stable URL.
