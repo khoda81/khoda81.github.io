@@ -1,81 +1,90 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>qbar — quantile raster</title>
-  <script>document.documentElement.dataset.embed = new URLSearchParams(location.search).get('embed') || '';</script>
-  <style>
-    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;--bg:#090b10;--panel:#0e131b;--line:rgba(145,166,196,.17);--text:#d8e2f0;--muted:#7f8ea3;--green:#71ecc3;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:radial-gradient(circle at 75% 0,rgba(113,236,195,.08),transparent 42%),var(--bg);color:var(--text)}
-    .shell{width:min(960px,calc(100% - 32px));margin:auto;padding:40px 0 48px}.chrome{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:end;margin-bottom:28px}.eyebrow{font:600 10px/1 var(--mono);letter-spacing:.12em;color:var(--green);margin:0 0 10px}.chrome h1{font-size:clamp(36px,6vw,68px);letter-spacing:-.055em;line-height:.94;margin:0}.chrome p{max-width:56ch;color:var(--muted);line-height:1.55}.control{border:1px solid var(--line);padding:12px 14px;min-width:210px;font:500 10px/1.3 var(--mono);color:var(--muted)} input{width:100%;accent-color:var(--green);margin-top:9px}
-    .fleet{border:1px solid var(--line);background:rgba(13,18,26,.82);padding:18px}.fleet-head{display:flex;justify-content:space-between;gap:18px;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--line);font:500 10px/1.2 var(--mono);color:var(--muted)}.fleet-head b{color:var(--green);font-weight:600}.services{display:grid}.service{display:grid;grid-template-columns:132px minmax(160px,1fr) 70px;gap:16px;align-items:center;min-height:78px;border-bottom:1px solid var(--line)}.service:last-child{border-bottom:0}.name{font:600 11px/1.25 var(--mono)}.name small{display:block;color:var(--muted);font-weight:500;margin-top:5px}.p95{text-align:right;font:600 11px/1 var(--mono);color:#cbd7e6}.method{display:grid;grid-template-columns:repeat(5,auto);justify-content:start;gap:7px;align-items:center;margin-top:18px;font:500 9px/1.2 var(--mono);color:#6f8096}.method span{border:1px solid var(--line);padding:6px 8px}.method i{font-style:normal;color:var(--green)}
-    q-bar{display:block;width:100%;height:58px;color:var(--bar,#71ecc3);font:500 9px/1 var(--mono)}
-    html[data-embed="fleet"] body{background:#090b10;min-height:0}html[data-embed="fleet"] .shell{width:100%;padding:0}html[data-embed="fleet"] .chrome,html[data-embed="fleet"] .method{display:none}html[data-embed="fleet"] .fleet{border:0;padding:10px 12px;background:#090b10}html[data-embed="fleet"] .fleet-head{padding-bottom:9px}html[data-embed="fleet"] .service{grid-template-columns:92px minmax(120px,1fr) 58px;gap:9px;min-height:46px}html[data-embed="fleet"] q-bar{height:38px}html[data-embed="fleet"] .name,html[data-embed="fleet"] .p95{font-size:8px}
-    @media(max-width:600px){.chrome{grid-template-columns:1fr}.service{grid-template-columns:92px minmax(100px,1fr) 58px;gap:9px}.method{grid-template-columns:1fr}.method i{display:none}}
-  </style>
-</head>
-<body>
-  <main class="shell">
-    <header class="chrome">
-      <div><p class="eyebrow">QBAR / PIXEL-RESOLUTION QUANTILES</p><h1>Let uncertainty choose the scale.</h1><p>Each screen pixel owns equal probability mass. Value-space ticks survive only when the distribution gives them enough pixel support.</p></div>
-      <label class="control">uncertainty <output id="uout">1.00×</output><input id="uncertainty" type="range" min=".45" max="2.4" step=".01" value="1"></label>
-    </header>
-    <section class="fleet">
-      <div class="fleet-head"><b>service latency forecasts</b><span>P0 → P100 · simulated telemetry</span></div>
-      <div class="services" id="services"></div>
-    </section>
-    <div class="method" aria-hidden="true"><span>p ∈ [0,1]</span><i>→</i><span>Q(p)</span><i>→</i><span>equal-mass pixels</span><i>→</i><span>nice ticks</span><i>→</i><span>visibility</span></div>
-  </main>
-<script type="module">
-const SVG='http://www.w3.org/2000/svg';
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const smoothstep=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t)};
-class DecimalTicks{
-  constructor(m=[1,2,5]){this.m=[...m].sort((a,b)=>b-a)}
-  select(lower,upper){
-    if(!Number.isFinite(lower)||!Number.isFinite(upper)||upper<=lower)return null;
-    const mag=Math.max(Math.abs(lower),Math.abs(upper));
-    for(let e=Math.floor(Math.log10(mag||1))+1;e>=-12;e--){
-      const p=10**e;
-      for(let j=0;j<this.m.length;j++){
-        const spacing=this.m[j]*p, k=Math.floor(upper/spacing), value=k*spacing;
-        if(lower<value&&value<=upper)return{value,spacing,level:e*this.m.length+j};
-      }
-    }
-    return null;
-  }
-}
-const ticks=new DecimalTicks();
-function rasterize(quantile,width){
-  const boundaries=new Float64Array(width+1);
-  for(let i=0;i<=width;i++)boundaries[i]=quantile(i/width);
-  const out=[];
-  for(let i=0;i<width;i++){
-    const lo=boundaries[i],hi=boundaries[i+1];
-    if(!Number.isFinite(lo)||!Number.isFinite(hi)||hi<=lo)continue;
-    const s=ticks.select(lo,hi);if(!s)continue;
-    const px=s.spacing/(hi-lo), opacity=smoothstep(24,64,px);
-    if(opacity>1/255)out.push({...s,position:i+.5,opacity});
-  }
-  return out;
-}
-class QBar extends HTMLElement{
-  constructor(){super();this.attachShadow({mode:'open'}).innerHTML=`<style>:host{display:block;contain:size layout style}svg{width:100%;height:100%;display:block;overflow:visible}line{stroke:currentColor;vector-effect:non-scaling-stroke}.axis{opacity:.2}text{fill:currentColor;font:inherit;font-variant-numeric:tabular-nums}</style><svg aria-hidden="true"><line class="axis"/><g></g></svg>`;this.svg=this.shadowRoot.querySelector('svg');this.axis=this.shadowRoot.querySelector('.axis');this.g=this.shadowRoot.querySelector('g');this.ro=new ResizeObserver(()=>this.refresh())}
-  connectedCallback(){this.ro.observe(this);this.refresh()}
-  disconnectedCallback(){this.ro.disconnect();if(this.raf)cancelAnimationFrame(this.raf)}
-  refresh(){if(this.raf)return;this.raf=requestAnimationFrame(()=>{this.raf=0;this.render()})}
-  render(){const w=Math.max(1,Math.round(this.getBoundingClientRect().width)),h=Math.max(1,Math.round(this.getBoundingClientRect().height));this.svg.setAttribute('viewBox',`0 0 ${w} ${h}`);this.axis.setAttribute('x1','0');this.axis.setAttribute('x2',String(w));this.axis.setAttribute('y1','.5');this.axis.setAttribute('y2','.5');this.g.replaceChildren();if(!this.quantile)return;const frag=document.createDocumentFragment();for(const t of rasterize(this.quantile,w)){const group=document.createElementNS(SVG,'g');group.setAttribute('opacity',String(t.opacity));const line=document.createElementNS(SVG,'line');line.setAttribute('x1',t.position);line.setAttribute('x2',t.position);line.setAttribute('y1','.5');line.setAttribute('y2','8.5');const label=document.createElementNS(SVG,'text');label.setAttribute('transform',`translate(${t.position} 12.5) rotate(90)`);label.setAttribute('dominant-baseline','middle');label.textContent=this.formatTick?this.formatTick(t.value):String(Math.round(t.value));group.append(line,label);frag.append(group)}this.g.append(frag)}
-}
-customElements.define('q-bar',QBar);
-const q=(p,m,s)=>p<=0?0:p>=1?Infinity:m*(p/(1-p))**(1/s);
-const defs=[['Search API','fra-1','#ff9eb5',82,.2],['Checkout','ams-2','#76d7ff',138,1.4],['Vector index','hel-1','#c9a7ff',205,2.6],['Media edge','global','#8de8b2',44,3.7]];
-const root=document.querySelector('#services');
-const services=defs.map(([name,region,color,base,phase])=>{const row=document.createElement('article');row.className='service';row.innerHTML=`<div class="name">${name}<small>${region}</small></div><q-bar style="--bar:${color};color:${color}"></q-bar><output class="p95">—</output>`;root.append(row);const bar=row.querySelector('q-bar');bar.formatTick=v=>`${Math.round(v)}ms`;return{bar,p95:row.querySelector('.p95'),base,phase,median:base,shape:5}});
-const input=document.querySelector('#uncertainty'),out=document.querySelector('#uout');let uncertainty=1,last=performance.now(),t=0;
-input.addEventListener('input',()=>{uncertainty=+input.value;out.value=`${uncertainty.toFixed(2)}×`});
-function frame(now){t+=Math.min(.1,(now-last)/1000);last=now;for(const s of services){s.median=s.base*(1+.14*Math.sin(t*.72+s.phase)+.05*Math.sin(t*2.1+s.phase));s.shape=Math.max(1.4,7/uncertainty);s.bar.quantile=p=>q(p,s.median,s.shape);s.p95.textContent=`${Math.round(q(.95,s.median,s.shape))} ms`;s.bar.refresh()}requestAnimationFrame(frame)}
-requestAnimationFrame(frame);
-</script>
-</body>
+<html>
+    <head>
+        <title>Tick Opacity Demo</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                box-sizing: border-box;
+                background: #121212;
+                color: #eee;
+            }
+
+            #controls {
+                margin-bottom: 20px;
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+                align-items: flex-end;
+            }
+
+            .control-group {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .lab-link {
+                color: #9fc0ff;
+                margin-left: auto;
+                padding-bottom: 2px;
+            }
+
+            canvas {
+                flex-grow: 1;
+                width: 100%;
+                min-height: 0;
+                display: block;
+                background: #1e1e1e;
+                border: 1px solid #333;
+                border-radius: 4px;
+            }
+
+            input[type="range"] {
+                width: 100%;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="controls">
+            <div class="control-group" style="flex-grow: 1">
+                <label>lambda: <span id="val_lambda"></span></label>
+                <label>median: <span id="median"></span></label>
+            </div>
+            <div class="control-group">
+                <label>min_dist (px): <span id="val_min_dist">30</span></label>
+                <input
+                    type="range"
+                    id="min_dist"
+                    min="1"
+                    max="500"
+                    step="1"
+                    value="128"
+                />
+            </div>
+            <div class="control-group">
+                <label
+                    >drop_off (multiplier):
+                    <span id="val_drop_off">2.0</span></label
+                >
+                <input
+                    type="range"
+                    id="drop_off"
+                    min="1.0"
+                    max="5.0"
+                    step="0.1"
+                    value="2.0"
+                />
+            </div>
+            <a class="lab-link" href="bayes.html">Bayesian inference lab →</a>
+        </div>
+
+        <canvas id="canvas"></canvas>
+        <script src="index.js"></script>
+    </body>
 </html>

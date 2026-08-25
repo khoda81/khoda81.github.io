@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QBar · Bayesian Inference Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#121212; --panel:#1b1b1b; --panel2:#202020; --text:#eee; --muted:#a6a6a6;
+      --border:#333; --grid:#2e2e2e; --accent:#78a6ff; --warm:#f0a15a; --prior:#9a9a92;
+      --good:#75c894; --bad:#ef7b7b;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:18px; background:var(--bg); color:var(--text); font-family:system-ui,sans-serif; }
+    a { color:var(--accent); }
+    header { max-width:1180px; margin:0 auto 14px; display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    h1 { margin:0; font-size:22px; }
+    header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+    .layout { max-width:1180px; margin:auto; display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:14px; }
+    .main,.side { min-width:0; }
+    .card { border:1px solid var(--border); border-radius:10px; background:var(--panel); padding:12px; }
+    .card + .card { margin-top:12px; }
+    .section-title { font-size:13px; font-weight:700; margin:0 0 8px; }
+    .sub { margin:0 0 10px; color:var(--muted); font-size:12px; line-height:1.45; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
+    button,select { min-height:38px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); font:inherit; }
+    button { cursor:pointer; padding:7px 10px; }
+    button.active { background:var(--accent); color:#081226; border-color:transparent; font-weight:700; }
+    button:disabled { opacity:.45; cursor:default; }
+    select { width:100%; padding:7px 8px; }
+    canvas { width:100%; height:auto; display:block; background:#171717; border:1px solid var(--border); border-radius:7px; touch-action:pan-y; }
+    #field { aspect-ratio: 760 / 430; }
+    #predictive { aspect-ratio: 760 / 190; cursor:crosshair; }
+    #qbar { aspect-ratio:760 / 142; }
+    .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin-top:9px; }
+    .stat { padding:8px; border-radius:7px; background:#161616; min-width:0; }
+    .stat .label { color:var(--muted); font-size:10px; margin-bottom:3px; }
+    .stat .value { font-weight:700; font-variant-numeric:tabular-nums; font-size:14px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .control { margin-bottom:12px; }
+    .control label { display:flex; justify-content:space-between; gap:8px; font-size:11px; margin-bottom:5px; }
+    .control label span { color:var(--muted); font-variant-numeric:tabular-nums; }
+    input[type=range] { width:100%; accent-color:var(--accent); }
+    .actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .mode-info { font-size:11px; line-height:1.5; color:var(--muted); }
+    .mode-info strong { color:var(--text); }
+    .badge { display:inline-block; margin:0 4px 4px 0; border-radius:999px; padding:3px 6px; border:1px solid var(--border); color:var(--text); background:#171717; }
+    .badge.exact { border-color:#315b41; color:#9ee0b5; }
+    .badge.approx { border-color:#673d3d; color:#f3aaaa; }
+    .obs { display:flex; flex-wrap:wrap; gap:4px; max-height:94px; overflow:auto; }
+    .obs span { font-size:10px; color:var(--muted); border:1px solid var(--border); background:#171717; padding:3px 6px; border-radius:999px; font-variant-numeric:tabular-nums; }
+    .empty { font-size:11px; color:var(--muted); }
+    .equation { margin-top:8px; padding:8px; background:#161616; border-radius:7px; font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted); white-space:pre-wrap; }
+    .legend { display:flex; flex-wrap:wrap; gap:12px; margin-top:7px; color:var(--muted); font-size:10px; }
+    .legend span { display:flex; align-items:center; gap:5px; }
+    .swatch { width:15px; height:8px; border-radius:2px; display:inline-block; }
+    @media(max-width:760px){ .layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:10px}.side .card{margin:0}.stats{grid-template-columns:1fr 1fr} }
+    @media(max-width:520px){body{padding:10px}.side{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Bayesian Inference Lab</h1>
+    <p>Same posterior, different formulations — then deliberately worse approximations.</p>
+  </div>
+  <a href="index.html">← original QBar demo</a>
+</header>
+
+<div class="layout">
+  <main class="main">
+    <section class="card">
+      <div class="toolbar" id="fieldViews">
+        <button data-view="selected" class="active">Selected posterior</button>
+        <button data-view="reference">Reference posterior</button>
+        <button data-view="prior">Prior</button>
+        <button data-view="likelihood">Last likelihood</button>
+        <button data-view="error">Approximation error</button>
+      </div>
+      <canvas id="field" width="760" height="430" aria-label="Posterior field over mean and log variance"></canvas>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--accent)"></i> posterior weight</span>
+        <span><i class="swatch" style="background:var(--warm)"></i> likelihood</span>
+        <span><i class="swatch" style="background:var(--prior)"></i> prior</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="label">mode compute</div><div class="value" id="modeMs">—</div></div>
+        <div class="stat"><div class="label">reference compute</div><div class="value" id="refMs">—</div></div>
+        <div class="stat"><div class="label">KL(ref posterior ∥ mode)</div><div class="value" id="posteriorKl">—</div></div>
+        <div class="stat"><div class="label">KL(ref predictive ∥ mode)</div><div class="value" id="predictiveKl">—</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <p class="section-title">Posterior predictive · click/tap to observe x</p>
+      <p class="sub">Reference is faint. Selected method is bright. The curve is sampled in screen bins, not at arbitrary world-space points.</p>
+      <canvas id="predictive" width="760" height="190" aria-label="Posterior predictive distribution"></canvas>
+    </section>
+
+    <section class="card">
+      <p class="section-title">QBar view of the predictive</p>
+      <p class="sub">Both rows use qbar's probability-coordinate idea: ticks live at quantiles, and density decides which labels survive.</p>
+      <canvas id="qbar" width="760" height="142" aria-label="QBar comparison of reference and selected predictive distributions"></canvas>
+    </section>
+  </main>
+
+  <aside class="side">
+    <section class="card">
+      <p class="section-title">Inference representation</p>
+      <select id="mode">
+        <option value="reference">Reference grid</option>
+        <option value="sufficient" selected>Sufficient-stat grid</option>
+        <option value="analytic">Analytic u marginalization</option>
+        <option value="laplace">Laplace</option>
+        <option value="diag">Diagonal Laplace</option>
+      </select>
+      <div id="modeInfo" class="mode-info" style="margin-top:9px"></div>
+    </section>
+
+    <section class="card">
+      <p class="section-title">Prior</p>
+      <div class="control"><label>mean u <span id="mu0v"></span></label><input id="mu0" type="range" min="-4" max="4" step="0.1" value="0"></div>
+      <div class="control"><label>sd u <span id="tauv"></span></label><input id="tau" type="range" min="0.2" max="4" step="0.05" value="1.5"></div>
+      <div class="control"><label>mean log v <span id="s0v"></span></label><input id="s0" type="range" min="-2.5" max="1.5" step="0.1" value="0"></div>
+      <div class="control"><label>sd log v <span id="ssdv"></span></label><input id="ssd" type="range" min="0.15" max="2.2" step="0.05" value="0.8"></div>
+      <div class="actions"><button id="undo">Undo</button><button id="reset">Reset</button></div>
+    </section>
+
+    <section class="card">
+      <p class="section-title">Observed x</p>
+      <div id="obs" class="obs"><span class="empty">None yet.</span></div>
+      <div class="equation">x | u,v ~ N(u,v)
+s = log v
+
+log posterior
+= log prior + Σ log p(xᵢ|u,s)</div>
+    </section>
+  </aside>
+</div>
+<script src="bayes.js"></script>
+</body>
+</html>
