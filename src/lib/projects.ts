@@ -25,7 +25,7 @@ export const featured: Project[] = [
   {
     name: 'QBar', kind: 'PROBABILITY VISUALIZATION',
     description: 'A pixel-resolution quantile rasterizer: every CSS pixel owns equal probability mass, while human-friendly ticks fade according to local uncertainty.',
-    demo: '/qbar/', signal: 'quantile / tick family / visibility', unit: 'Q(p)'
+    repo: 'https://github.com/khoda81/qbar', demo: '/qbar/playground', signal: 'quantile / tick family / visibility', unit: 'Q(p)'
   },
   {
     name: '2048 Solver', kind: 'RUST + SEARCH',

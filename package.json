@@ -16,10 +16,11 @@
     "test": "bun test"
   },
   "devDependencies": {
+    "@qbar/qbar": "^0.4.0",
     "@sveltejs/adapter-static": "^4.0.1",
-    "@types/bun": "^1.4.4",
     "@sveltejs/kit": "^3.1.1",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "@types/bun": "^1.4.4",
     "svelte": "^5.57.2",
     "svelte-check": "^4.6.0",
     "typescript": "^6.0.3",

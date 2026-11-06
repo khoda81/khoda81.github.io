@@ -1,4 +1,6 @@
 <script lang="ts">
+  import QBarFleet from './QBarFleet.svelte';
+
   /** One message's interval narrowing: each symbol keeps a sub-interval of the previous one. */
   const intervals = [
     { symbol: 'Σ', left: 0, width: 100, size: '1.000000' },
@@ -18,9 +20,9 @@
 
     <div class="lab-grid">
       <div class="lab-panel">
-        <span class="project-topline"><span>QBAR</span><a class="qbar-demo-link" href="/qbar/" target="_blank" rel="noreferrer">standalone ↗</a></span>
+        <span class="project-topline"><span>QBAR</span><a class="qbar-demo-link" href="/qbar/playground" target="_blank" rel="noreferrer">playground ↗</a></span>
         <div class="qbar-frame-wrap">
-          <iframe title="QBar quantile rasterizer component" src="/qbar-demo/index.html?embed=fleet" loading="lazy" tabindex="-1"></iframe>
+          <QBarFleet />
         </div>
         <strong>make uncertainty decide what deserves a pixel</strong>
         <small class="qbar-method">QBar starts from a quantile function, not a fixed axis. It evaluates probability boundaries at screen resolution, so every pixel owns equal probability mass. Human-friendly tick candidates are chosen in value space; opacity comes from how much pixel support that local interval receives. As uncertainty widens, weak ticks fade instead of snapping the scale around.</small>
@@ -57,7 +59,6 @@
   .lab-panel > small { color: var(--muted); line-height: 1.5; margin-top: 8px; }
 
   .qbar-frame-wrap { flex: 1; min-height: 210px; margin: 24px 0 22px; border: 1px solid var(--line); overflow: hidden; background: #090b10; }
-  .qbar-frame-wrap iframe { width: 100%; height: 100%; min-height: 210px; display: block; border: 0; background: #090b10; pointer-events: none; }
   .qbar-method { font-size: 12px; }
   .qbar-demo-link { color: var(--green); }
   .method-flow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; font: 500 9px/1.2 var(--mono); color: #708199; }
