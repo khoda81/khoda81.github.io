@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta name="google-site-verification" content="-CkYKXDrRcO3qxHEOFu5YRKanGQRRD-nGlTvvqKkei4" />
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#080b10" />
   <title>Mahdi Khodabandeh (khoda81) — ML, Compression & Systems</title>
   <meta name="description" content="Mahdi Khodabandeh (khoda81) — machine learning, reinforcement learning, information theory, lossless compression, Rust systems, and interactive visualizations." />
   <meta name="robots" content="index,follow,max-image-preview:large" />
+  <!-- Proves ownership of the site to Google Search Console. -->
+  <meta name="google-site-verification" content="-CkYKXDrRcO3qxHEOFu5YRKanGQRRD-nGlTvvqKkei4" />
   <link rel="canonical" href="https://khoda81.github.io/" />
 
   <meta property="og:type" content="profile" />
@@ -56,202 +57,54 @@
   }
   </script>
   <script>
-    if (new URLSearchParams(location.search).has('mirror')) {
-      document.querySelector('meta[name="robots"]').content = 'noindex,follow';
+    // ?mirror=N marks this document as the Nth nested mirror of the page.
+    // <html data-mirror-depth> is the one place the depth is read from; setting
+    // it before first paint lets mirror-only styles apply without a layout jump.
+    {
+      const depth = Number.parseInt(new URLSearchParams(location.search).get('mirror') ?? '', 10);
+      if (0 < depth) {
+        document.documentElement.dataset.mirrorDepth = String(depth);
+        document.querySelector('meta[name="robots"]').content = 'noindex,follow';
+      }
     }
   </script>
-
-  
-  <style>
-    main { position: relative; z-index: 1; }
-    .ambient-math { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; contain: strict; }
-    .ambient-equation { position: absolute; white-space: nowrap; font: 500 clamp(15px, 1.7vw, 27px)/1 var(--mono); letter-spacing: -.045em; color: rgba(113,236,195,.065); will-change: transform; text-shadow: 0 0 26px rgba(113,236,195,.035); }
-    .ambient-equation small { font-size: .46em; letter-spacing: .08em; color: rgba(150,170,198,.55); margin-left: .8em; }
-    .ambient-equation:nth-child(1) { left: 3vw; top: 29vh; }
-    .ambient-equation:nth-child(2) { right: -4vw; top: 56vh; }
-    .ambient-equation:nth-child(3) { left: 17vw; top: 82vh; }
-
-    .mirror-shell { border: 1px solid var(--line); background: #080b10; overflow: hidden; }
-    .mirror-shell .live-frame-header { padding: 10px 12px; border-bottom: 1px solid var(--line); }
-    .mirror-viewport { position: relative; height: min(53vh, 560px); min-height: 390px; overflow: hidden; background: #080b10; }
-    .mirror-frame {
-      position: absolute; inset: 0 auto auto 0; width: 172.5%; height: 172.5%; border: 0; display: block;
-      transform: scale(.58); transform-origin: 0 0; pointer-events: none; background: #080b10;
-    }
-    .mirror-viewport::after {
-      content: ''; position: absolute; inset: 0; pointer-events: none;
-      box-shadow: inset 0 0 80px rgba(8,11,16,.28); border: 1px solid rgba(113,236,195,.06);
-    }
-    .mirror-note { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); font: 500 10px/1.4 var(--mono); color: var(--muted); }
-    .mirror-note b { color: #ced8e6; font-weight: 600; }
-    .mirror-note span:last-child { color: var(--green); }
-    .mirror-terminal::before { content: '↘  ↘  ↘'; position: absolute; inset: 0; display: grid; place-items: center; color: rgba(113,236,195,.35); font: 500 28px/1 var(--mono); letter-spacing: .8em; }
-
-    .qbar-method-panel { grid-column: span 1; }
-    .qbar-method-frame-wrap { flex: 1; min-height: 210px; margin: 24px 0 22px; border: 1px solid var(--line); overflow: hidden; background: #090b10; }
-    .qbar-method-frame { width: 100%; height: 100%; min-height: 210px; display: block; border: 0; background: #090b10; pointer-events: none; }
-    .qbar-method-panel small { font-size: 12px; }
-    .qbar-demo-link { color: var(--green); }
-    .method-flow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; font: 500 9px/1.2 var(--mono); color: #708199; }
-    .method-flow span { border: 1px solid var(--line); padding: 5px 7px; }
-    .method-flow i { color: var(--green); font-style: normal; align-self: center; }
-
-    html[data-mirror-depth] { scroll-behavior: auto !important; }
-    html[data-mirror-depth] .noise { opacity: .018; }
-    html[data-mirror-depth] .hero { min-height: 100vh; padding-top: 42px; }
-    html[data-mirror-depth] h1 { font-size: clamp(44px, 6.4vw, 92px); }
-    html[data-mirror-depth] .lede { font-size: clamp(15px, 1.3vw, 20px); }
-    html[data-mirror-depth] .mirror-note { font-size: 9px; }
-
-    @media (max-width: 720px) {
-      .ambient-equation { font-size: clamp(14px, 4vw, 19px); color: rgba(113,236,195,.05); }
-      .ambient-equation:nth-child(1) { left: -8vw; top: 34vh; }
-      .ambient-equation:nth-child(2) { right: -28vw; top: 64vh; }
-      .ambient-equation:nth-child(3) { left: 8vw; top: 89vh; }
-      .mirror-viewport { min-height: 360px; height: 52vh; }
-      .mirror-frame { width: 190%; height: 190%; transform: scale(.5263); }
-      .mirror-note { grid-template-columns: 1fr; }
-      .qbar-method-panel { grid-column: auto; }
-    }
-  </style>
-<link rel="stylesheet" crossorigin href="./chunk-cs17jfag.css"><script type="module" crossorigin src="./chunk-bxer8fjv.js"></script></head>
+  <link href="./_app/immutable/entry/start.CaNjyhxa.js" rel="modulepreload">
+		<link href="./_app/immutable/entry/payload.DSmR2FwN.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/CCMZs0eX.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/BDgJ2tgM.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/DV4c6Nn1.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/TVNXUoG4.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/DYrviY11.js" rel="modulepreload">
+		<link href="./_app/immutable/entry/app.B7GpuX7d.js" rel="modulepreload">
+		<link href="./_app/immutable/nodes/0.KkL6WdQ6.js" rel="modulepreload">
+		<link href="./_app/immutable/nodes/2.BrRUcImv.js" rel="modulepreload">
+		
+		<link href="./_app/immutable/assets/2.CHvo5Pig.css" rel="stylesheet">
+</head>
 <body>
-  <div class="noise" aria-hidden="true"></div>
-  <div class="ambient-math" aria-hidden="true">
-    <div class="ambient-equation">I(x) = −ln p(x)<small>nats</small></div>
-    <div class="ambient-equation">I₂(x) = I(x) / ln 2<small>bits</small></div>
-    <div class="ambient-equation">L ≈ −log₂ p<small>probability → space</small></div>
-  </div>
+  <div style="display: contents"><!--[--><!--[--><!--[0--><!--[--><!--[--><!--[-1--><!--[--><div class="noise svelte-1uha8ag" aria-hidden="true"></div> <div class="ambient-math svelte-vjefl6" aria-hidden="true"><!--[--><div class="ambient-equation svelte-vjefl6" style="transform: translate3d(0.00px,13.08px,0) rotate(-5.5deg);">I(x) = −ln p(x)<small class="svelte-vjefl6">nats</small></div><div class="ambient-equation svelte-vjefl6" style="transform: translate3d(3.97px,-8.58px,0) rotate(4.5deg);">I₂(x) = I(x) / ln 2<small class="svelte-vjefl6">bits</small></div><div class="ambient-equation svelte-vjefl6" style="transform: translate3d(-1.02px,10.27px,0) rotate(-2.5deg);">L ≈ −log₂ p<small class="svelte-vjefl6">probability → space</small></div><!--]--></div><!----> <nav class="nav shell svelte-1h32yp1"><a class="brand svelte-1h32yp1" href="#top" aria-label="Home">MK<span class="slash svelte-1h32yp1">/</span>bits</a> <div class="nav-links svelte-1h32yp1"><a href="#work" class="svelte-1h32yp1">work</a> <a href="#lab" class="svelte-1h32yp1">live lab</a> <a href="#systems" class="svelte-1h32yp1">systems</a> <a href="https://github.com/khoda81" target="_blank" rel="noreferrer" class="svelte-1h32yp1">github ↗</a></div></nav><!----> <main id="top" class="svelte-1uha8ag"><section class="hero shell svelte-1q37ri0"><div class="hero-copy svelte-1q37ri0"><p class="eyebrow">MAHDI KHODABANDEH · KHODA81 · ML / RL / SYSTEMS</p> <h1 class="svelte-1q37ri0">I build systems that <em>spend bits carefully.</em></h1> <p class="lede svelte-1q37ri0">Compression, information theory, learning algorithms, market microstructure, and the visualization machinery that makes their internal state visible.</p> <div class="hero-links"><a class="primary" href="#work">decode portfolio ↓</a> <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">github.com/khoda81 ↗</a></div></div> <div class="hero-instrument svelte-1q37ri0"><div class="mirror-shell svelte-190ssz5"><div class="live-frame-header svelte-190ssz5"><span>this page / live mirror</span><span class="pulse">● same state</span></div> <div class="mirror-viewport svelte-190ssz5"><!--[-1--><!--]--></div> <div class="mirror-note svelte-190ssz5"><span class="svelte-190ssz5"><b class="svelte-190ssz5">The page observes itself.</b> Scroll state and live telemetry propagate inward; interaction stays outside.</span> <span class="svelte-190ssz5">picture-in-picture, recursively</span></div></div><!----></div> <div class="telemetry svelte-dl5lzf" aria-label="Live page telemetry"><div class="svelte-dl5lzf"><span class="svelte-dl5lzf">AGE</span><strong class="svelte-dl5lzf">24.233764002695 y</strong><small class="svelte-dl5lzf">Tehran birthday clock</small></div> <div class="svelte-dl5lzf"><span class="svelte-dl5lzf">UPTIME</span><strong class="svelte-dl5lzf">0.000000 s</strong><small class="svelte-dl5lzf">page-local clock</small></div> <div class="svelte-dl5lzf"><span class="svelte-dl5lzf">FRAME</span><strong class="svelte-dl5lzf">0</strong><small class="svelte-dl5lzf">60.0 fps smoothed</small></div> <div class="svelte-dl5lzf"><span class="svelte-dl5lzf">POINTER</span> <strong class="svelte-dl5lzf">— · 0 px/s</strong> <small class="svelte-dl5lzf">position · speed</small></div> <div class="svelte-dl5lzf"><span class="svelte-dl5lzf">SCROLL</span><strong class="svelte-dl5lzf">0 · 0 px/s</strong><small class="svelte-dl5lzf">position · velocity</small></div></div><!----></section><!----> <section id="work" class="section shell"><header class="section-heading"><div><p class="eyebrow">SELECTED SIGNALS / 01</p><h2>Things that are better <em>watched</em> than described.</h2></div> <p>Every project keeps its real GitHub URL beside it. Live deployments get an explicit launch link.</p></header> <article class="feature-card svelte-17ndl8v"><div class="feature-copy svelte-17ndl8v"><div class="project-topline"><span>LIVE · MARKET + NEWS</span><span>Δlog(price)</span></div> <h3>Chronickle</h3> <p class="blurb">A multi-source market timeline with price heatmaps, a shared time axis, data-acquisition telemetry, retries, sockets, and real-world news events.</p> <div class="actions"><a class="primary" href="https://khoda81.github.io/chronickle/" target="_blank" rel="noreferrer">open live ↗</a> <a href="https://github.com/khoda81/chronickle" target="_blank" rel="noreferrer">source ↗</a></div></div> <div class="live-frame-wrap svelte-17ndl8v"><div class="live-frame-header"><span>khoda81.github.io/chronickle</span><span class="pulse">● live</span></div> <iframe title="Chronickle live preview" src="https://khoda81.github.io/chronickle/" loading="lazy" class="svelte-17ndl8v"></iframe></div></article> <div class="project-grid svelte-17ndl8v"><!--[--><article class="project-card svelte-oviq8z"><div class="project-topline"><span>MARKET MICROSTRUCTURE</span><span>q = ln(A/A′)</span></div> <div class="signal-bars svelte-oviq8z" aria-hidden="true"><!--[--><i class="svelte-oviq8z" style="height: 20%;"></i><i class="svelte-oviq8z" style="height: 58.33617489005177%;"></i><i class="svelte-oviq8z" style="height: 37.91415708776303%;"></i><i class="svelte-oviq8z" style="height: 64.40077249396114%;"></i><i class="svelte-oviq8z" style="height: 31.076970571151637%;"></i><i class="svelte-oviq8z" style="height: 50.18498691882021%;"></i><i class="svelte-oviq8z" style="height: 18.766282829367114%;"></i><i class="svelte-oviq8z" style="height: 48.092158514324964%;"></i><i class="svelte-oviq8z" style="height: 29.996531041332457%;"></i><i class="svelte-oviq8z" style="height: 68.9605786991329%;"></i><i class="svelte-oviq8z" style="height: 51.9061126887999%;"></i><i class="svelte-oviq8z" style="height: 82.7836821151214%;"></i><i class="svelte-oviq8z" style="height: 52.63638147569463%;"></i><i class="svelte-oviq8z" style="height: 72.0875386940247%;"></i><i class="svelte-oviq8z" style="height: 38.00373290761947%;"></i><i class="svelte-oviq8z" style="height: 9.014536593486564%;"></i><i class="svelte-oviq8z" style="height: 41.15304842145113%;"></i><i class="svelte-oviq8z" style="height: 24.81972208689563%;"></i><!--]--></div> <h3>Order-book Ball</h3> <p class="blurb svelte-oviq8z">A causal price estimator that moves only when the executable bid/ask interval reaches it, with a temporal-spread hitting-time field.</p> <div class="project-meta svelte-oviq8z"><span>bid / ask / wall age</span></div> <div class="actions compact"><!--[-1--><!--]--> <!--[0--><a href="https://github.com/khoda81/orderbook-ball" target="_blank" rel="noreferrer">github ↗</a><!--]--></div></article><article class="project-card svelte-oviq8z"><div class="project-topline"><span>ML RESEARCH</span><span>preq. nats</span></div> <div class="signal-bars svelte-oviq8z" aria-hidden="true"><!--[--><i class="svelte-oviq8z" style="height: 63.59757699686234%;"></i><i class="svelte-oviq8z" style="height: 44.50331770891641%;"></i><i class="svelte-oviq8z" style="height: 72.52707640996707%;"></i><i class="svelte-oviq8z" style="height: 40.16639564493504%;"></i><i class="svelte-oviq8z" style="height: 59.17265516401618%;"></i><i class="svelte-oviq8z" style="height: 26.63917674893126%;"></i><i class="svelte-oviq8z" style="height: 54.40540667877238%;"></i><i class="svelte-oviq8z" style="height: 35.100137344534026%;"></i><i class="svelte-oviq8z" style="height: 73.82104245544079%;"></i><i class="svelte-oviq8z" style="height: 57.61385110222143%;"></i><i class="svelte-oviq8z" style="height: 35.9972978479098%;"></i><i class="svelte-oviq8z" style="height: 61.247005014297244%;"></i><i class="svelte-oviq8z" style="height: 27.27431382679787%;"></i><i class="svelte-oviq8z" style="height: 46.65216707427057%;"></i><i class="svelte-oviq8z" style="height: 16.28450335059162%;"></i><i class="svelte-oviq8z" style="height: 46.90695888855751%;"></i><i class="svelte-oviq8z" style="height: 29.692647283906183%;"></i><i class="svelte-oviq8z" style="height: 68.67358313963496%;"></i><!--]--></div> <h3>Vertical Epoching</h3> <p class="blurb svelte-oviq8z">Adaptive optimization depth: keep spending gradient updates on a batch while fresh unseen evidence says the extra compute still transfers.</p> <div class="project-meta svelte-oviq8z"><span>selector / audit / queue</span></div> <div class="actions compact"><!--[-1--><!--]--> <!--[-1--><!--]--></div></article><article class="project-card svelte-oviq8z"><div class="project-topline"><span>PROBABILITY VISUALIZATION</span><span>Q(p)</span></div> <div class="signal-bars svelte-oviq8z" aria-hidden="true"><!--[--><i class="svelte-oviq8z" style="height: 50.76297056655664%;"></i><i class="svelte-oviq8z" style="height: 80.34769478852309%;"></i><i class="svelte-oviq8z" style="height: 49.12975040688223%;"></i><i class="svelte-oviq8z" style="height: 68.27812020811004%;"></i><i class="svelte-oviq8z" style="height: 34.81369929876541%;"></i><i class="svelte-oviq8z" style="height: 8%;"></i><i class="svelte-oviq8z" style="height: 40.39651598204459%;"></i><i class="svelte-oviq8z" style="height: 24.63706916007815%;"></i><i class="svelte-oviq8z" style="height: 63.062590474492794%;"></i><i class="svelte-oviq8z" style="height: 42.869351720974876%;"></i><i class="svelte-oviq8z" style="height: 69.60758128468369%;"></i><i class="svelte-oviq8z" style="height: 36.429993171992415%;"></i><i class="svelte-oviq8z" style="height: 55.504304939289256%;"></i><i class="svelte-oviq8z" style="height: 23.88915545864824%;"></i><i class="svelte-oviq8z" style="height: 52.95596357003412%;"></i><i class="svelte-oviq8z" style="height: 34.67068043962266%;"></i><i class="svelte-oviq8z" style="height: 73.61114258865818%;"></i><i class="svelte-oviq8z" style="height: 56.71118160094821%;"></i><!--]--></div> <h3>QBar</h3> <p class="blurb svelte-oviq8z">A pixel-resolution quantile rasterizer: every CSS pixel owns equal probability mass, while human-friendly ticks fade according to local uncertainty.</p> <div class="project-meta svelte-oviq8z"><span>quantile / tick family / visibility</span></div> <div class="actions compact"><!--[0--><a class="primary" href="/qbar/playground" target="_blank" rel="noreferrer">live ↗</a><!--]--> <!--[0--><a href="https://github.com/khoda81/qbar" target="_blank" rel="noreferrer">github ↗</a><!--]--></div></article><article class="project-card svelte-oviq8z"><div class="project-topline"><span>RUST + SEARCH</span><span>ms / move</span></div> <div class="signal-bars svelte-oviq8z" aria-hidden="true"><!--[--><i class="svelte-oviq8z" style="height: 33.8426029118195%;"></i><i class="svelte-oviq8z" style="height: 57.919125102476706%;"></i><i class="svelte-oviq8z" style="height: 23.450004523534965%;"></i><i class="svelte-oviq8z" style="height: 43.26118979658879%;"></i><i class="svelte-oviq8z" style="height: 14.035771330710945%;"></i><i class="svelte-oviq8z" style="height: 45.92723869772206%;"></i><i class="svelte-oviq8z" style="height: 29.461952097824273%;"></i><i class="svelte-oviq8z" style="height: 68.2901846450251%;"></i><i class="svelte-oviq8z" style="height: 49.40296587385634%;"></i><i class="svelte-oviq8z" style="height: 77.68490952437408%;"></i><i class="svelte-oviq8z" style="height: 45.50197387339211%;"></i><i class="svelte-oviq8z" style="height: 64.51495066127005%;"></i><i class="svelte-oviq8z" style="height: 31.81373820565713%;"></i><i class="svelte-oviq8z" style="height: 59.32326863989484%;"></i><i class="svelte-oviq8z" style="height: 39.80316155974748%;"></i><i class="svelte-oviq8z" style="height: 24.46058298843984%;"></i><i class="svelte-oviq8z" style="height: 62.373616551224075%;"></i><i class="svelte-oviq8z" style="height: 40.99972403898661%;"></i><!--]--></div> <h3>2048 Solver</h3> <p class="blurb svelte-oviq8z">A portable-SIMD Rust 2048 engine with deadline-bounded search and an agent that continuously turns compute into better actions.</p> <div class="project-meta svelte-oviq8z"><span>search / score / depth</span></div> <div class="actions compact"><!--[-1--><!--]--> <!--[0--><a href="https://github.com/khoda81/rust-2048-solver" target="_blank" rel="noreferrer">github ↗</a><!--]--></div></article><article class="project-card svelte-oviq8z"><div class="project-topline"><span>INTERACTIVE GRAPH</span><span>frame</span></div> <div class="signal-bars svelte-oviq8z" aria-hidden="true"><!--[--><i class="svelte-oviq8z" style="height: 66.49085543626586%;"></i><i class="svelte-oviq8z" style="height: 32.63530982062511%;"></i><i class="svelte-oviq8z" style="height: 51.94632660020018%;"></i><i class="svelte-oviq8z" style="height: 21.36190765462161%;"></i><i class="svelte-oviq8z" style="height: 51.72815877461686%;"></i><i class="svelte-oviq8z" style="height: 34.34876844378638%;"></i><i class="svelte-oviq8z" style="height: 73.3398838352449%;"></i><i class="svelte-oviq8z" style="height: 55.609521047253%;"></i><i class="svelte-oviq8z" style="height: 85.45270078523869%;"></i><i class="svelte-oviq8z" style="height: 54.43969548787627%;"></i><i class="svelte-oviq8z" style="height: 19.635040492373307%;"></i><i class="svelte-oviq8z" style="height: 40.03568993679272%;"></i><i class="svelte-oviq8z" style="height: 12.02431311067799%;"></i><i class="svelte-oviq8z" style="height: 45.13566181298815%;"></i><i class="svelte-oviq8z" style="height: 29.274382263253585%;"></i><i class="svelte-oviq8z" style="height: 67.78291466039009%;"></i><i class="svelte-oviq8z" style="height: 47.81522410255082%;"></i><i class="svelte-oviq8z" style="height: 74.80658806736743%;"></i><!--]--></div> <h3>Better 3D Graph</h3> <p class="blurb svelte-oviq8z">A Three.js / ngraph Obsidian plugin for navigating a force-directed knowledge graph in 3D.</p> <div class="project-meta svelte-oviq8z"><span>nodes / edges / kinetic energy</span></div> <div class="actions compact"><!--[-1--><!--]--> <!--[0--><a href="https://github.com/khoda81/obsidian-better-graph-3d" target="_blank" rel="noreferrer">github ↗</a><!--]--></div></article><!--]--></div></section><!----> <section id="lab" class="section lab-section svelte-3txp1b"><div class="shell"><header class="section-heading"><div><p class="eyebrow">INFORMATION LAB / 02</p><h2>Probability is just code length waiting to happen.</h2></div> <p>The visual language is shared with the compression work: quantiles, intervals, surprisal, and accumulated code length.</p></header> <div class="lab-grid svelte-3txp1b"><div class="lab-panel svelte-3txp1b"><span class="project-topline"><span>QBAR</span><a class="qbar-demo-link svelte-3txp1b" href="/qbar/playground" target="_blank" rel="noreferrer">playground ↗</a></span> <div class="qbar-frame-wrap svelte-3txp1b"><div class="fleet svelte-oi380s"><div class="fleet-head svelte-oi380s"><b class="svelte-oi380s">service latency forecasts</b><span>P0 → P100 · simulated telemetry</span></div> <!--[--><div class="service svelte-oi380s"><div class="name svelte-oi380s">Search API<small class="svelte-oi380s">fra-1</small></div> <q-bar orientation="horizontal" class="svelte-oi380s" style="color: #ff9eb5;"></q-bar> <output class="p95 svelte-oi380s">130 ms</output></div><div class="service svelte-oi380s"><div class="name svelte-oi380s">Checkout<small class="svelte-oi380s">ams-2</small></div> <q-bar orientation="horizontal" class="svelte-oi380s" style="color: #76d7ff;"></q-bar> <output class="p95 svelte-oi380s">250 ms</output></div><div class="service svelte-oi380s"><div class="name svelte-oi380s">Vector index<small class="svelte-oi380s">hel-1</small></div> <q-bar orientation="horizontal" class="svelte-oi380s" style="color: #c9a7ff;"></q-bar> <output class="p95 svelte-oi380s">343 ms</output></div><div class="service svelte-oi380s"><div class="name svelte-oi380s">Media edge<small class="svelte-oi380s">global</small></div> <q-bar orientation="horizontal" class="svelte-oi380s" style="color: #8de8b2;"></q-bar> <output class="p95 svelte-oi380s">60 ms</output></div><!--]--></div><!----></div> <strong class="svelte-3txp1b">make uncertainty decide what deserves a pixel</strong> <small class="qbar-method svelte-3txp1b">QBar starts from a quantile function, not a fixed axis. It evaluates probability boundaries at screen resolution, so every pixel owns equal probability mass. Human-friendly tick candidates are chosen in value space; opacity comes from how much pixel support that local interval receives. As uncertainty widens, weak ticks fade instead of snapping the scale around.</small> <div class="method-flow svelte-3txp1b" aria-hidden="true"><span class="svelte-3txp1b">p ∈ [0,1]</span><i class="svelte-3txp1b">→</i><span class="svelte-3txp1b">Q(p)</span><i class="svelte-3txp1b">→</i><span class="svelte-3txp1b">equal-mass pixels</span><i class="svelte-3txp1b">→</i><span class="svelte-3txp1b">nice ticks</span><i class="svelte-3txp1b">→</i><span class="svelte-3txp1b">visibility</span></div></div> <div class="lab-panel svelte-3txp1b"><span class="project-topline"><span>ARITHMETIC CODER</span><span>one message</span></span> <div class="coder-stack svelte-3txp1b" aria-label="Arithmetic coding interval narrowing illustration"><!--[--><div class="svelte-3txp1b" style="margin-left: 0%; width: 100%;"><b class="svelte-3txp1b">Σ</b><span>1.000000</span></div><div class="svelte-3txp1b" style="margin-left: 9%; width: 61%;"><b class="svelte-3txp1b">A</b><span>0.610000</span></div><div class="svelte-3txp1b" style="margin-left: 29%; width: 27%;"><b class="svelte-3txp1b">R</b><span>0.164700</span></div><div class="svelte-3txp1b" style="margin-left: 36%; width: 13%;"><b class="svelte-3txp1b">I</b><span>0.021411</span></div><div class="svelte-3txp1b" style="margin-left: 40%; width: 6%;"><b class="svelte-3txp1b">T</b><span>0.001285</span></div><!--]--></div> <strong class="svelte-3txp1b">symbols carve one nested interval</strong> <small class="svelte-3txp1b">No mysterious resets here: a new [0,1) means a new message.</small></div> <a class="lab-panel svelte-3txp1b" href="https://github.com/khoda81/arithmetipy" target="_blank" rel="noreferrer"><span class="project-topline"><span>ARITHMETIPY</span><span>Rust → Python ↗</span></span> <div class="bitstream svelte-3txp1b" aria-hidden="true">01100110100111001010110100101110<span class="svelte-3txp1b">0110</span>001101</div> <strong class="svelte-3txp1b">streaming arithmetic coding</strong> <small class="svelte-3txp1b">32-bit encoder / decoder implemented in Rust, exposed through PyO3.</small></a></div></div></section><!----> <section id="systems" class="section shell"><header class="section-heading"><div><p class="eyebrow">UNDER THE PIXELS / 03</p><h2>Data structures, compression, search, and the machinery underneath.</h2></div> <p>Less spectacle here; more of the reasons the spectacle can stay responsive.</p></header> <div class="systems-list svelte-1aqtb7e"><!--[--><article class="svelte-1aqtb7e"><div class="system-index svelte-1aqtb7e">06</div> <div><div class="project-topline"><span>RUST DATA STRUCTURE</span><span>O(log n)</span></div> <h3 class="svelte-1aqtb7e">time-series-cache</h3> <p class="blurb svelte-1aqtb7e">An augmented deterministic treap for strict predecessor/successor queries, range extrema, and targeted renderer invalidation.</p></div> <div class="system-links svelte-1aqtb7e"><!--[-1--><!--]--> <!--[0--><a href="https://github.com/khoda81/time-series-cache" target="_blank" rel="noreferrer" class="svelte-1aqtb7e">github ↗</a><!--]--></div></article><article class="svelte-1aqtb7e"><div class="system-index svelte-1aqtb7e">07</div> <div><div class="project-topline"><span>CACHE-AWARE SYSTEMS</span><span>µs</span></div> <h3 class="svelte-1aqtb7e">LogVec</h3> <p class="blurb svelte-1aqtb7e">A Bentley–Saxe logarithmic data structure in one contiguous Vec, using binary-sized sorted runs and zero-allocation merges.</p></div> <div class="system-links svelte-1aqtb7e"><!--[-1--><!--]--> <!--[0--><a href="https://github.com/khoda81/logvec" target="_blank" rel="noreferrer" class="svelte-1aqtb7e">github ↗</a><!--]--></div></article><article class="svelte-1aqtb7e"><div class="system-index svelte-1aqtb7e">08</div> <div><div class="project-topline"><span>COMPRESSION</span><span>bits</span></div> <h3 class="svelte-1aqtb7e">Arithmetipy</h3> <p class="blurb svelte-1aqtb7e">Streaming arithmetic encoder/decoder implemented in Rust and exposed to Python through PyO3.</p></div> <div class="system-links svelte-1aqtb7e"><!--[-1--><!--]--> <!--[0--><a href="https://github.com/khoda81/arithmetipy" target="_blank" rel="noreferrer" class="svelte-1aqtb7e">github ↗</a><!--]--></div></article><article class="svelte-1aqtb7e"><div class="system-index svelte-1aqtb7e">09</div> <div><div class="project-topline"><span>COMPRESSION RESEARCH</span><span>bits / byte</span></div> <h3 class="svelte-1aqtb7e">DETHCOD</h3> <p class="blurb svelte-1aqtb7e">Experimental transformer-based lossless compression with a learned discrete bottleneck and reinforcement-learning formulations.</p></div> <div class="system-links svelte-1aqtb7e"><!--[-1--><!--]--> <!--[0--><a href="https://github.com/khoda81/dethcod" target="_blank" rel="noreferrer" class="svelte-1aqtb7e">github ↗</a><!--]--></div></article><article class="svelte-1aqtb7e"><div class="system-index svelte-1aqtb7e">10</div> <div><div class="project-topline"><span>CHESS + ML</span><span>−ln p(move)</span></div> <h3 class="svelte-1aqtb7e">Harmon</h3> <p class="blurb svelte-1aqtb7e">Transformer-based chess work centered on modeling human moves, mistakes, player strength, and game outcomes.</p></div> <div class="system-links svelte-1aqtb7e"><!--[-1--><!--]--> <!--[0--><a href="https://github.com/khoda81/harmon" target="_blank" rel="noreferrer" class="svelte-1aqtb7e">github ↗</a><!--]--></div></article><article class="svelte-1aqtb7e"><div class="system-index svelte-1aqtb7e">11</div> <div><div class="project-topline"><span>OLDER INTERACTIVE</span><span>px / frame</span></div> <h3 class="svelte-1aqtb7e">Path Follower</h3> <p class="blurb svelte-1aqtb7e">A small browser experiment that still earns its place because it is directly playable and points back to the long-running visualization thread.</p></div> <div class="system-links svelte-1aqtb7e"><!--[0--><a href="/path-follower/" target="_blank" rel="noreferrer" class="svelte-1aqtb7e">live ↗</a><!--]--> <!--[0--><a href="https://github.com/khoda81/path-follower" target="_blank" rel="noreferrer" class="svelte-1aqtb7e">github ↗</a><!--]--></div></article><!--]--></div></section><!----> <section class="section closing svelte-iepsvj"><div class="shell closing-grid svelte-iepsvj"><div><p class="eyebrow">END OF STREAM</p><h2 class="svelte-iepsvj">Still compressing.</h2></div> <div class="closing-links svelte-iepsvj"><a href="https://github.com/khoda81" target="_blank" rel="noreferrer">GitHub ↗</a> <a href="https://www.linkedin.com/in/mahdi-khodabandeh-681037249" target="_blank" rel="noreferrer">LinkedIn ↗</a> <a href="https://twitter.com/axiom_the_ai" target="_blank" rel="noreferrer">X / Twitter ↗</a></div></div></section><!----></main><!--]--><!--]--><!--]--><!----><!--]--><!--]--><!--]--><!----> <!--[-1--><!--]--><!--]-->
+			
+			<script>
+				{
+					__sveltekit_ovqgkb = {
+						base: new URL(".", location).pathname.slice(0, -1),
+						version: "1793988281154"
+					};
 
-  <nav class="nav shell">
-    <a class="brand" href="#top" aria-label="Home">MK<span class="slash">/</span>bits</a>
-    <div class="nav-links">
-      <a href="#work">work</a>
-      <a href="#lab">live lab</a>
-      <a href="#systems">systems</a>
-      <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">github ↗</a>
-    </div>
-  </nav>
+					const element = document.currentScript.parentElement;
 
-  <main id="top">
-    <section class="hero shell">
-      <div class="hero-copy">
-        <p class="eyebrow">MAHDI KHODABANDEH · KHODA81 · ML / RL / SYSTEMS</p>
-        <h1>I build systems that <em>spend bits carefully.</em></h1>
-        <p class="lede">Compression, information theory, learning algorithms, market microstructure, and the visualization machinery that makes their internal state visible.</p>
-        <div class="hero-links">
-          <a class="primary" href="#work">decode portfolio ↓</a>
-          <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">github.com/khoda81 ↗</a>
-        </div>
-      </div>
-
-      <div class="hero-instrument">
-        <div class="mirror-shell">
-          <div class="live-frame-header"><span>this page / live mirror</span><span class="pulse">● same state</span></div>
-          <div class="mirror-viewport" id="mirror-viewport">
-            <iframe id="mirror-frame" class="mirror-frame" title="Recursive live mirror of this portfolio" aria-hidden="true" tabindex="-1"></iframe>
-          </div>
-          <div class="mirror-note">
-            <span><b>The page observes itself.</b> Scroll state and live telemetry propagate inward; interaction stays outside.</span>
-            <span>picture-in-picture, recursively</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="telemetry" aria-label="Live page telemetry">
-        <div><span>AGE</span><strong id="age">23.000000000000 y</strong><small>Tehran birthday clock</small></div>
-        <div><span>UPTIME</span><strong id="uptime">0.000000 s</strong><small>page-local clock</small></div>
-        <div><span>FRAME</span><strong id="frame">0</strong><small><span id="fps">0</span> fps smoothed</small></div>
-        <div><span>POINTER</span><strong id="pointer">0,0 · 0 px/s</strong><small>position · speed</small></div>
-        <div><span>SCROLL</span><strong id="scroll">0 · 0 px/s</strong><small>position · velocity</small></div>
-      </div>
-    </section>
-
-    <section id="work" class="section shell">
-      <header class="section-heading">
-        <div><p class="eyebrow">SELECTED SIGNALS / 01</p><h2>Things that are better <em>watched</em> than described.</h2></div>
-        <p>Every project keeps its real GitHub URL beside it. Live deployments get an explicit launch link.</p>
-      </header>
-
-      <article class="feature-card chronickle-card">
-        <div class="feature-copy">
-          <div class="project-topline"><span>LIVE · MARKET + NEWS</span><span>Δlog(price)</span></div>
-          <h3>Chronickle</h3>
-          <p>A multi-source market timeline with price heatmaps, a shared time axis, data-acquisition telemetry, retries, sockets, and real-world news events.</p>
-          <div class="actions">
-            <a class="primary" href="https://khoda81.github.io/chronickle/" target="_blank" rel="noreferrer">open live ↗</a>
-            <a href="https://github.com/khoda81/chronickle" target="_blank" rel="noreferrer">source ↗</a>
-          </div>
-        </div>
-        <div class="live-frame-wrap">
-          <div class="live-frame-header"><span>khoda81.github.io/chronickle</span><span class="pulse">● live</span></div>
-          <iframe title="Chronickle live preview" src="https://khoda81.github.io/chronickle/" loading="lazy"></iframe>
-        </div>
-      </article>
-
-      <div id="featured-projects" class="project-grid"></div>
-    </section>
-
-    <section id="lab" class="section lab-section">
-      <div class="shell">
-        <header class="section-heading">
-          <div><p class="eyebrow">INFORMATION LAB / 02</p><h2>Probability is just code length waiting to happen.</h2></div>
-          <p>The visual language is shared with the compression work: quantiles, intervals, surprisal, and accumulated code length.</p>
-        </header>
-
-        <div class="lab-grid">
-          <div class="lab-panel qbar-method-panel" id="qbar-method">
-            <span class="project-topline"><span>QBAR</span><a class="qbar-demo-link" href="./qbar/" target="_blank" rel="noreferrer">standalone ↗</a></span>
-            <div class="qbar-method-frame-wrap">
-              <iframe class="qbar-method-frame" title="QBar quantile rasterizer component" src="./qbar-demo/index.html?embed=fleet" loading="lazy" tabindex="-1"></iframe>
-            </div>
-            <strong>make uncertainty decide what deserves a pixel</strong>
-            <small>QBar starts from a quantile function, not a fixed axis. It evaluates probability boundaries at screen resolution, so every pixel owns equal probability mass. Human-friendly tick candidates are chosen in value space; opacity comes from how much pixel support that local interval receives. As uncertainty widens, weak ticks fade instead of snapping the scale around.</small>
-            <div class="method-flow" aria-hidden="true"><span>p ∈ [0,1]</span><i>→</i><span>Q(p)</span><i>→</i><span>equal-mass pixels</span><i>→</i><span>nice ticks</span><i>→</i><span>visibility</span></div>
-          </div>
-
-          <div class="lab-panel coder-panel">
-            <span class="project-topline"><span>ARITHMETIC CODER</span><span>one message</span></span>
-            <div class="coder-stack" aria-label="Arithmetic coding interval narrowing illustration">
-              <div style="--l:0%;--w:100%"><b>Σ</b><span>1.000000</span></div>
-              <div style="--l:9%;--w:61%"><b>A</b><span>0.610000</span></div>
-              <div style="--l:29%;--w:27%"><b>R</b><span>0.164700</span></div>
-              <div style="--l:36%;--w:13%"><b>I</b><span>0.021411</span></div>
-              <div style="--l:40%;--w:6%"><b>T</b><span>0.001285</span></div>
-            </div>
-            <strong>symbols carve one nested interval</strong>
-            <small>No mysterious resets here: a new [0,1) means a new message.</small>
-          </div>
-
-          <a class="lab-panel" href="https://github.com/khoda81/arithmetipy" target="_blank" rel="noreferrer">
-            <span class="project-topline"><span>ARITHMETIPY</span><span>Rust → Python ↗</span></span>
-            <div class="bitstream" aria-hidden="true">01100110100111001010110100101110<span>0110</span>001101</div>
-            <strong>streaming arithmetic coding</strong>
-            <small>32-bit encoder / decoder implemented in Rust, exposed through PyO3.</small>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <section id="systems" class="section shell">
-      <header class="section-heading">
-        <div><p class="eyebrow">UNDER THE PIXELS / 03</p><h2>Data structures, compression, search, and the machinery underneath.</h2></div>
-        <p>Less spectacle here; more of the reasons the spectacle can stay responsive.</p>
-      </header>
-      <div id="systems-list" class="systems-list"></div>
-    </section>
-
-    <section class="section closing">
-      <div class="shell closing-grid">
-        <div><p class="eyebrow">END OF STREAM</p><h2>Still compressing.</h2></div>
-        <div class="closing-links">
-          <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">GitHub ↗</a>
-          <a href="https://www.linkedin.com/in/mahdi-khodabandeh-681037249" target="_blank" rel="noreferrer">LinkedIn ↗</a>
-          <a href="https://twitter.com/axiom_the_ai" target="_blank" rel="noreferrer">X / Twitter ↗</a>
-        </div>
-      </div>
-    </section>
-  </main>
-  
+					import("./_app/immutable/entry/start.CaNjyhxa.js").then(async (kit) => {
+						kit.init(__sveltekit_ovqgkb);
+						const app = await import("./_app/immutable/entry/app.B7GpuX7d.js");
+						kit.start(app, element, {
+							node_ids: [0, 2],
+							data: [null,null],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
 </body>
 </html>
