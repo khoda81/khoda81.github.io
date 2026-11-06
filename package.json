@@ -1,11 +1,28 @@
 {
   "name": "khoda81-portfolio",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
+  "type": "module",
   "description": "Information-theory portfolio for khoda81.github.io",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
   "scripts": {
-    "dev": "bun ./scripts/dev.ts",
-    "build": "bun ./scripts/build.ts",
-    "preview": "cd dist && bun ../scripts/dev.ts"
+    "dev": "bun --bun vite dev",
+    "build": "bun --bun vite build && bun ./scripts/copy-path-follower.ts",
+    "preview": "bun --bun vite preview",
+    "prepare": "svelte-kit sync || echo ''",
+    "check": "bun --bun svelte-kit sync && bun --bun svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^4.0.1",
+    "@types/bun": "^1.4.4",
+    "@sveltejs/kit": "^3.1.1",
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.6.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0"
   }
 }
