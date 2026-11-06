@@ -20,7 +20,7 @@ export const featured: Project[] = [
   {
     name: 'Vertical Epoching', kind: 'ML RESEARCH',
     description: 'Adaptive optimization depth: keep spending gradient updates on a batch while fresh unseen evidence says the extra compute still transfers.',
-    repo: 'https://github.com/khoda81/vertical-epoching', signal: 'selector / audit / queue', unit: 'preq. nats'
+    signal: 'selector / audit / queue', unit: 'preq. nats'
   },
   {
     name: 'QBar', kind: 'PROBABILITY VISUALIZATION',
