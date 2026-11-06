@@ -56,18 +56,6 @@
     }
   }
   </script>
-  <script>
-    // ?mirror=N marks this document as the Nth nested mirror of the page.
-    // <html data-mirror-depth> is the one place the depth is read from; setting
-    // it before first paint lets mirror-only styles apply without a layout jump.
-    {
-      const depth = Number.parseInt(new URLSearchParams(location.search).get('mirror') ?? '', 10);
-      if (0 < depth) {
-        document.documentElement.dataset.mirrorDepth = String(depth);
-        document.querySelector('meta[name="robots"]').content = 'noindex,follow';
-      }
-    }
-  </script>
   %sveltekit.head%
 </head>
 <body>

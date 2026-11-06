@@ -14,16 +14,17 @@ bun run dev
 
 `bun run check` type-checks the project and `bun test` runs the tests.
 
+In the browser: scroll to zoom (read more bits), drag to pan, click a box to decode it, and use the arrow keys to walk the tree.
+
 ## Layout
 
-- `src/routes/+page.svelte` composes the page from the sections in `src/lib/components/`.
-- `src/lib/projects.ts` is the project list behind the cards and the systems list.
-- `src/lib/live.svelte.ts` samples the page once per frame (clock, frame rate, pointer, scroll) into one snapshot that every animated element reads.
+The page is an arithmetic code. Every project owns a slice of [0, 1): a theme's projects split its slice by weight, so a box's height is its probability and reaching it costs −log₂ of that in bits, which is its width, as in [natlas](https://github.com/khoda81/natlas). Each place ends with an end-of-message slice, so its codeword (the shortest binary fraction inside that slice) is unique and is the URL hash. The top sixteenth, `1111`, is the page itself and contains the whole tree again.
+
+- `src/lib/catalog.ts` is the content: themes and projects, with the weights that size them and their commit counts.
+- `src/lib/code.ts` builds the interval tree under both measures (attention and commits) and encodes and decodes codewords.
+- `src/lib/explorer/` draws it: `view.ts` is the camera (depth and zoom are one coordinate), `layout.ts` turns the tree into screen boxes, `slabs.ts` draws them with three.js, and `Scene.svelte` handles motion, input, labels and the qbar axes.
+- `src/lib/components/Panel.svelte` is the readable side of the same state, including an index of every project.
 - `static/` is copied to the site root verbatim.
-
-### The recursive mirror
-
-The hero embeds the page in itself through `?mirror=N`, which `src/app.html` turns into `<html data-mirror-depth>` before first paint. A mirror doesn't sample anything: each frame it shows its parent's snapshot and follows its parent's scroll position, so every level shows the same state. Nesting stops at depth 6 (4 on narrow screens).
 
 ## Production build
 
