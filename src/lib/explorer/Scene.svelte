@@ -186,7 +186,8 @@
     glows = nextGlows;
     labels = nextLabels;
     exhibit = placeExhibit(focusKey);
-    return slabs;
+    // Lifted boxes go last, so they and their shadows cover the plane. The sort is stable, so ties keep tree order.
+    return slabs.sort((a, b) => a.z - b.z);
   }
 
   function placeExhibit(focusKey: string): typeof exhibit {
@@ -331,7 +332,8 @@
       if (disposed) return;
       let renderer: InstanceType<typeof three.WebGLRenderer>;
       try {
-        renderer = new three.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+        // No multisampling: the slab shader filters its own edges, so MSAA would only cost fill rate.
+        renderer = new three.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
       } catch {
         unavailable = true;
         return;
