@@ -18,9 +18,9 @@ In the browser: scroll to zoom (read more bits), drag to pan, click a box to dec
 
 ## Layout
 
-The page is an arithmetic code. Every project owns a slice of [0, 1): a theme's projects split its slice by weight, so a box's height is its probability and reaching it costs −log₂ of that in bits, where its box begins, as in [natlas](https://github.com/khoda81/natlas). Projects are leaves, so their boxes run on to the right. The top sixteenth, `1111`, is the page itself and contains the whole tree again.
+The page is an arithmetic code. Every project owns a slice of [0, 1): a theme's projects split its slice by weight, so a box's height is its probability and reaching it costs −log₂ of that in bits, where its box begins, as in [natlas](https://github.com/khoda81/natlas). Projects are leaves, so their boxes run on to the right. The root is this page, and its top sixteenth, `1111`, is this page again; so the root is also the top sixteenth of a page just like it, and the pages nest without end both ways. They all look alike, so the camera is always renumbered to stand in level 0: wherever you zoom is the root. Only the top, which every level shares, is an edge.
 
-URLs name a place by path, as `/markets/` or `/markets/lobservatory/`, and every place is prerendered at its path. The hash is the codeword of the view: the biggest dyadic interval on screen, read inside the place as if it were all of [0, 1), so `/markets/#1011` is the sixteenth `1011` of Markets. At `/`, each leading `1111` goes one page deeper. The header shows the same codeword and can be edited.
+URLs name a place by path, as `/markets/` or `/markets/lobservatory/`, and every place is prerendered at its path. The hash is the codeword of the view: the biggest dyadic interval on screen, read inside the place as if it were all of [0, 1), so `/markets/#1011` is the sixteenth `1011` of Markets. At `/`, a leading `1111` is the page inside. The header shows the same codeword and can be edited.
 
 - `src/lib/catalog.ts` is the content: themes and projects, with the weights that size them and their commit counts.
 - `src/lib/code.ts` builds the interval tree under both measures (attention and commits), names places by path, and converts intervals to codewords and back.

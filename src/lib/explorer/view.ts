@@ -64,17 +64,27 @@ export function raise(cam: Camera, levels = 1): Camera {
 const MAX_DEPTH = 40;
 
 /**
+ * Where a level's own view starts, in bits: a little left of the root's own
+ * frame, so the root shown whole is in its level, not the one around it. A
+ * camera this far into the page is shown from inside it, half a bit past
+ * where coming back out returns it, so it doesn't flap at the boundary.
+ */
+const LEVEL_START = -CONTEXT_BITS - 1, LEVEL_END = LEVEL_START + PAGE_BITS + .5;
+
+/**
  * Keeps the camera in the level it is looking at, so coordinates never shrink
- * below float precision however long you zoom: it goes a level down once its
- * left edge passes the page's right edge inside the page, and back up once it
- * leaves the level's root. The half-bit gap stops it flapping at the boundary.
+ * below float precision however long you zoom: it goes a level down once it is
+ * far enough into the page, and a level up, into the page around this one,
+ * once it leaves the level's root. Levels nest without end both ways, so only
+ * the top is a real edge: every level shares it, and nothing is above it.
  * Outside the page there is no deeper level, so zoom stops at MAX_DEPTH.
  */
 export function renormalize(cam: Camera): Camera {
   for (;;) {
-    if (PAGE_BITS + .5 <= cam.x && PAGE_LO <= cam.y && cam.y < 1) {
+    cam = { ...cam, y: Math.min(cam.y, 1 - viewSpan(cam.x) / 2) };
+    if (LEVEL_END <= cam.x && PAGE_LO <= cam.y) {
       cam = { level: cam.level + 1, x: cam.x - PAGE_BITS, y: (cam.y - PAGE_LO) * 2 ** PAGE_BITS };
-    } else if (0 < cam.level && (cam.x < 0 || cam.y < 0 || 1 <= cam.y)) {
+    } else if (cam.x < LEVEL_START || cam.y < 0) {
       cam = raise(cam);
     } else {
       return cam.x <= MAX_DEPTH ? cam : { ...cam, x: MAX_DEPTH };

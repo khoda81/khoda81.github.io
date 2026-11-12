@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 import { PAGE_CODE, placeAt, places, root, spanAt, type Place } from '../code.ts';
-import { addressOf, cameraFor, href, parse, shallower, type Address } from './address.ts';
+import { addressOf, cameraFor, href, parse, renumber, type Address } from './address.ts';
 import { frame } from './view.ts';
 
 const at = (place: Place, bits = '', level = 0): Address => ({ focus: { place, level }, bits });
@@ -40,26 +40,32 @@ describe('addresses', () => {
   });
 
   test('URLs are the path, then the bits; inside the page, bits from the root', () => {
-    expect(href(at(root), 0)).toBe('/');
-    expect(href(at(markets, '1011'), 0)).toBe('/markets/#1011');
-    expect(href(at(root, '', 1), 0)).toBe(`/#${PAGE_CODE}`);
+    expect(href(at(root))).toBe('/');
+    expect(href(at(markets, '1011'))).toBe('/markets/#1011');
+    // Every level looks alike, and the scene renumbers the reader's to 0.
+    expect(href(at(markets, '1011', 1))).toBe('/markets/#1011');
     expect(parse('/markets', '#1011')).toEqual(at(markets, '1011'));
     expect(parse('/markets/', '#lobservatory')).toEqual(at(markets));
     expect(parse('/nowhere/', '')).toBeUndefined();
     for (const address of [at(markets, '1011'), at(root, PAGE_CODE + '01')]) {
-      const [path, bits = ''] = href(address, 0).split('#');
+      const [path, bits = ''] = href(address).split('#');
       expect(parse(path!, bits)).toEqual(address);
     }
   });
 });
 
 describe('the recursion', () => {
-  test('two pages deep is shown as one, with the same view', () => {
-    const deep = at(root, PAGE_CODE.repeat(2) + '01');
-    expect(shallower(deep)).toEqual(at(root, PAGE_CODE + '01'));
-    expect(shallower(at(markets, '1', 2))).toEqual(at(markets, '1', 1));
-    const cam = cameraFor(at(markets, '1', 2), 0), folded = cameraFor(at(markets, '1', 1), 0);
-    expect({ ...cam, level: cam.level - 1 }).toEqual(folded);
-    expect(() => shallower(at(markets))).toThrow();
+  test('renumbering levels changes nothing on screen', () => {
+    expect(renumber(at(root, PAGE_CODE + '01'), -1)).toEqual(at(root, '01'));
+    expect(renumber(at(markets, '1', 2), -1)).toEqual(at(markets, '1', 1));
+    expect(renumber(at(markets, '1'), 1)).toEqual(at(markets, '1', 1));
+    const cam = cameraFor(at(markets, '1', 2), 0), renumbered = cameraFor(at(markets, '1', 1), 0);
+    expect({ ...cam, level: cam.level - 1 }).toEqual(renumbered);
+    expect(() => renumber(at(markets), -1)).toThrow();
+  });
+
+  test('zooming out of the root leads into the root around it', () => {
+    const out = cameraFor(at(root, '', -1), 0);
+    expect(addressOf({ place: root, level: 0 }, out, 0)).toEqual(at(root, '', -1));
   });
 });

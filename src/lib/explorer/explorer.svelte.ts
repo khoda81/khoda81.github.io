@@ -33,14 +33,14 @@ class Explorer {
   }
 
   get href(): string {
-    return href(this.here, this.t);
+    return href(this.here);
   }
 
-  /** Goes to `address`, as a new history entry unless `replace`. */
+  /** Goes to `address`, as a new history entry unless `replace`, or unless it has the URL already there, as the root around the root does. */
   go(address: Address, replace = false): void {
     clearTimeout(this.#settling);
     this.here = address;
-    void goto(this.href, { shallow: true, replace });
+    void goto(this.href, { shallow: true, replace: replace || this.href === location.pathname + location.hash });
   }
 
   /** Takes on the address of a view the reader moved to, without flying; the URL follows once the view rests. */
@@ -61,8 +61,9 @@ class Explorer {
     const { place, level } = this.focus;
     const to = (next: Place, at = level) => this.go({ focus: { place: next, level: at }, bits: '' });
     if (direction === 'out') {
+      // Out of the root is the root around it, which looks the same: the tree goes up forever.
       if (place.parent) to(place.parent as Place);
-      else if (0 < level) to(root, level - 1);
+      else to(root, level - 1);
       return;
     }
     if (direction === 'in') {

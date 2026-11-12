@@ -7,10 +7,9 @@ import { frame, raise, renormalize, viewSpan, type Camera } from './view.ts';
  * The codeword is the biggest dyadic interval that fits on screen, and ''
  * shows the whole place.
  *
- * A place's own name, its path, needs no bits. A URL is the path of a place
- * outside the page and the bits inside it, as /markets/#1011. Places inside
- * the page have no path, so their URL is bits from the root, which say how
- * deep with each leading PAGE_CODE.
+ * A URL is the place's path and the bits inside it, as /markets/#1011. The
+ * levels of the page all look alike and the scene keeps the reader in level
+ * 0, so the root of a URL is always the page the reader is in.
  */
 export type Address = { readonly focus: Focus; readonly bits: string };
 
@@ -49,34 +48,28 @@ export function addressOf(focus: Focus, cam: Camera, t: number): Address {
   const slice = spanAt(place, t), middle = (view.lo + view.hi) / 2;
   const small = (slice.hi - slice.lo) * 2 ** PROJECT_MARGIN < (view.hi - view.lo) * (1 - SLACK);
   if (small || middle < slice.lo || slice.hi <= middle) {
-    const out = place.parent ? { place: place.parent as Place, level } : 0 < level ? { place: root, level: level - 1 } : null;
-    if (out) return addressOf(out, cam, t);
+    // The root is the page slice of a root one level out, so there is always a place around.
+    return addressOf(place.parent ? { place: place.parent as Place, level } : { place: root, level: level - 1 }, cam, t);
   }
   return { focus, bits: fit(view, slice) };
 }
 
 /**
- * How many pages deep the reader is ever told they are. Every level inside the
- * page looks exactly like the one around it, so a reader two pages in is
- * shown, without a visible change, as one page in: they can go in forever,
- * and one step out always leads out.
+ * The same address with its levels numbered `by` deeper, as the scene does to
+ * keep the camera in level 0. Every level looks exactly like the ones around
+ * it, so renumbering changes nothing on screen: the reader can go in or out
+ * forever, and wherever they are is the root.
  */
-export const DEEPEST = 1;
-
-/** The same address told one page shallower, for a view that is two pages deep. */
-export function shallower({ focus: { place, level }, bits }: Address): Address {
-  if (0 < level) return { focus: { place, level: level - 1 }, bits };
-  // Outside the page only the root holds a view inside it, so its bits begin by entering the page.
+export function renumber({ focus: { place, level }, bits }: Address, by: 1 | -1): Address {
+  if (0 <= level + by) return { focus: { place, level: level + by }, bits };
+  // Level 0 numbered shallower: only the root holds a view inside its page, so its bits begin by entering it.
   if (place.kind !== 'root' || !bits.startsWith(PAGE_CODE)) throw new Error(`${pathOf(place)}#${bits} is not inside the page`);
   return { focus: { place, level }, bits: bits.slice(PAGE_CODE.length) };
 }
 
-/** The URL of `address`, relative to the site. */
-export function href(address: Address, t: number): string {
-  const { focus, bits } = address;
-  if (focus.level === 0) return pathOf(focus.place) + (bits ? `#${bits}` : '');
-  const fromRoot = addressOf({ place: root, level: 0 }, cameraFor(address, t), t).bits;
-  return `/#${fromRoot}`;
+/** The URL of `address`, relative to the site; the scene renumbers any level to 0, where the same place has this URL. */
+export function href({ focus, bits }: Address): string {
+  return pathOf(focus.place) + (bits ? `#${bits}` : '');
 }
 
 /** The address a URL names, or undefined for a path that names no place. A hash that isn't bits names nothing more than the place. */

@@ -12,9 +12,11 @@ export type Measure = 'emphasis' | 'effort';
 export type Span = { readonly lo: number; readonly hi: number };
 
 /**
- * The page itself is the root's top slice, [1 − 2^−PAGE_BITS, 1), and holds the
- * whole root again. Being dyadic, every codeword inside it is PAGE_CODE followed
- * by a codeword of the root, so each repetition of PAGE_CODE is one level deeper.
+ * The root is this page, and its top slice, [1 − 2^−PAGE_BITS, 1), is this page
+ * again: the root one level in. So the root is also the top slice of a root one
+ * level out, and the levels nest without end both ways, all alike. Being
+ * dyadic, every codeword inside the slice is PAGE_CODE followed by a codeword
+ * of the root, so each repetition of PAGE_CODE is one level deeper.
  */
 export const PAGE_BITS = 4;
 export const PAGE_CODE = '1'.repeat(PAGE_BITS);
@@ -29,7 +31,7 @@ interface NodeBase {
 export interface RootNode extends NodeBase { readonly kind: 'root' }
 export interface ThemeNode extends NodeBase { readonly kind: 'theme'; readonly theme: Theme }
 export interface ProjectNode extends NodeBase { readonly kind: 'project'; readonly project: Project; readonly theme: Theme }
-/** This page. Its children are the root's, one recursion level deeper, so it stores none. */
+/** The root one level in, as its parent's top slice. Its children are the root's, one level deeper, so it stores none. */
 export interface PageNode extends NodeBase { readonly kind: 'page' }
 
 export type Node = RootNode | ThemeNode | ProjectNode | PageNode;
@@ -114,7 +116,7 @@ export function lineage(node: Node): Node[] {
 
 export function name(node: Node): string {
   switch (node.kind) {
-    case 'root': return 'khoda81';
+    case 'root': return 'this page';
     case 'theme': return node.theme.name;
     case 'project': return node.project.name;
     case 'page': return 'this page';

@@ -25,7 +25,7 @@
 
   /** The index navigates at the current depth, so reading inside the page stays inside it. */
   const at = (target: Place): Address => ({ focus: { place: target, level: focus.level }, bits: '' });
-  const href = (target: Place) => hrefOf(at(target), blend);
+  const href = (target: Place) => hrefOf(at(target));
 
   function go(event: MouseEvent, target: Place) {
     event.preventDefault();
@@ -35,7 +35,6 @@
 
 <aside class="panel">
   <nav class="trail" aria-label="Where you are">
-    {#if focus.level}<span class="depth">{focus.level === 1 ? 'inside this page' : `${focus.level} pages deep`} /</span>{/if}
     {#each trail as node, i (node.id)}
       {#if i}<span class="sep">/</span>{/if}
       <a href={href(node)} onclick={event => go(event, node)} aria-current={node === place ? 'location' : undefined}>{name(node)}</a>
@@ -52,11 +51,9 @@
         and reaching it costs −log₂ of that in bits, so the wider a box, the more surprising it is.
         <b>Scroll</b> to read more bits, <b>drag</b> to move, <b>click</b> to decode; the arrow keys walk the tree.
         The URL names the place you’re in, and its <code>#bits</code> are the biggest dyadic interval of it on screen;
-        type your own in the header to go there. The last sixteenth, <code>1111</code>, is this page, so it contains itself.
+        type your own in the header to go there. The last sixteenth, <code>1111</code>, is this page, so it contains itself,
+        and it is the last sixteenth of a page just like it: in or out, it never ends.
       </p>
-      {#if focus.level}
-        <p class="how">You are inside this page, which the <code>1111</code> at the front of the bits says. Every page inside it looks the same, so however far in you go you are only ever one page deep, and one step out leads back out.</p>
-      {/if}
       <div class="links">
         <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">GitHub ↗</a>
         <a href="https://www.linkedin.com/in/mahdi-khodabandeh-681037249" target="_blank" rel="noreferrer">LinkedIn ↗</a>
@@ -136,7 +133,7 @@
 
   .trail { display: flex; flex-wrap: wrap; gap: 6px; font: 500 10px/1.4 var(--mono); color: var(--muted); }
   .trail a:hover, .trail a[aria-current] { color: var(--green); }
-  .sep, .depth { color: #4d5b6e; }
+  .sep { color: #4d5b6e; }
 
   .focus { --accent: var(--green); }
   .eyebrow { font: 600 10px/1.4 var(--mono); letter-spacing: .11em; color: var(--accent); margin: 0 0 12px; }

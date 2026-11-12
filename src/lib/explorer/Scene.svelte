@@ -7,9 +7,9 @@
   import type { Project } from '../catalog.ts';
   import { BACKGROUND, colorOf, rgb } from '../palette.ts';
   import QBarFleet from '../components/QBarFleet.svelte';
-  import { addressOf, cameraFor, DEEPEST, same, shallower, type Address } from './address.ts';
+  import { addressOf, cameraFor, renumber, same, type Address } from './address.ts';
   import { explorer } from './explorer.svelte.ts';
-  import { boxAt, layout, shallowerKey, type Box } from './layout.ts';
+  import { boxAt, layout, renumberKey, type Box } from './layout.ts';
   import type { Slab, Slabs, Rgb } from './slabs.ts';
   import { CONTEXT_BITS, flight, fromScreen, hold, pxPerBit, viewSpan, type Camera, type Flight, type Grab, type Viewport } from './view.ts';
 
@@ -129,9 +129,10 @@
   /** Builds this frame's slabs and labels; glow eases toward hover and focus so changes never pop. */
   function compose(dt: number, hovered: Box | null): Slab[] {
     const { place, level } = explorer.focus;
-    const focusKey = `${level}:${place.id}`;
+    // A root is drawn only as the page slice one level out, and every page slice further out holds it.
+    const focusKey = place.kind === 'root' ? `${level - 1}:${page.id}` : `${level}:${place.id}`;
     const path = new Set(lineage(place).map(node => `${level}:${node.id}`));
-    for (let l = 0; l < level; l += 1) path.add(`${l}:${page.id}`);
+    const onPath = (box: Box) => path.has(box.key) || (box.node.kind === 'page' && box.level < level);
     const k = 1 - Math.exp(-dt * 10);
     const nextGlows = new Map<string, number>();
     const slabs: Slab[] = [];
@@ -140,7 +141,7 @@
     for (const box of boxes) {
       const { node } = box;
       // The root column is always on the path, so it glows only when pointed at.
-      const goal = box === hovered ? 1 : node.kind === 'root' ? .15 : box.key === focusKey ? .75 : path.has(box.key) ? .4 : 0;
+      const goal = box === hovered ? 1 : box.key === focusKey ? .75 : onPath(box) ? .4 : 0;
       const previous = glows.get(box.key) ?? 0;
       const glow = previous + (goal - previous) * k;
       nextGlows.set(box.key, glow);
@@ -155,7 +156,7 @@
         y: vp.height / 2 - TOP - (y0 + y1) / 2,
         w, h, z,
         color: colorFor(node),
-        fill: node.kind === 'root' ? .06 : .15 + .7 * Math.sqrt(box.p),
+        fill: .15 + .7 * Math.sqrt(box.p),
         glow,
         style: node.kind === 'page' ? 'page' : 'plain'
       });
@@ -169,14 +170,14 @@
       const cap = node.kind === 'project' ? 40 : 56;
       const across = Math.min(cap, lh * .38, (lw - 18) / (.64 * text.length));
       // Likely boxes are tall and narrow, few bits wide; name those along their height.
-      const along = Math.min(cap, lw * .5, (lh - 18) / (.64 * text.length));
+      const along = Math.min(cap, lw * .5, (lw - 16) / 1.15, (lh - 18) / (.64 * text.length));
       const vertical = across < 9 && 9 <= along;
       const size = vertical ? along : across;
       if (size < 9) continue;
       const sub = !vertical && size * 1.3 + 30 < lh && 110 < lw ? quietLine(box) : null;
       nextLabels.push({
         key: box.key, x: vx0, y: vy0 + TOP, z, w: lw, h: lh, size, text, sub, vertical,
-        detail: node.kind === 'project' && sub ? detailOf(node.project, colorOf(node), lw, lh - (12 + size + 28)) : null
+        detail: node.kind === 'project' && sub ? detailOf(node.project, colorOf(node), lw, lh - (12 + size * 1.15 + 28)) : null
       });
     }
     glows = nextGlows;
@@ -307,8 +308,10 @@
       rows: [
         ['p given parent', box.p.toFixed(4)],
         ['−log₂ P', `${box.bits.toFixed(3)} bits`],
-        // The biggest dyadic interval inside the box, from the outermost root.
-        ['codeword', PAGE_CODE.repeat(box.level) + codeword(spanAt(node, t)) || '∅'],
+        // The biggest dyadic interval inside the box, read from the root the reader is in, when it is inside that.
+        // A page slice is the root one level in, whose codeword is all PAGE_CODE.
+        ...(node.kind === 'page' ? (0 <= box.level + 1 ? [['codeword', PAGE_CODE.repeat(box.level + 1) || '∅']] : [])
+          : 0 <= box.level ? [['codeword', PAGE_CODE.repeat(box.level) + codeword(spanAt(node, t)) || '∅']] : []),
         ...(isPlace(node) && box.level === 0 ? [['path', pathOf(node)]] : []),
         ...(0 < node.children.length ? [['H at node', `${entropy(node, t).toFixed(3)} bits`]] : []),
         ...(node.kind === 'project' && node.project.commits ? [['commits', String(node.project.commits)]] : [])
@@ -384,11 +387,12 @@
             const here = addressOf(explorer.here.focus, cam, blend);
             if (!same(here, explorer.here)) explorer.follow(followed = here);
           }
-          // A flight plans in its own levels, so the recursion is only folded between them.
-          while (motion.kind !== 'flying' && DEEPEST < cam.level) {
-            cam = { ...cam, level: cam.level - 1 };
-            explorer.follow(followed = shallower(explorer.here));
-            glows = new Map([...glows].map(([key, glow]) => [shallowerKey(key), glow]));
+          // Every level looks alike, so the camera is kept in level 0 by renumbering all of them; a flight plans in its own.
+          while (motion.kind !== 'flying' && cam.level !== 0) {
+            const by = cam.level < 0 ? 1 : -1;
+            cam = { ...cam, level: cam.level + by };
+            explorer.follow(followed = renumber(explorer.here, by));
+            glows = new Map([...glows].map(([key, glow]) => [renumberKey(key, by), glow]));
           }
           steer(now, dt);
           explorer.camera = cam;
@@ -509,7 +513,7 @@
     position: absolute; left: 0; top: 0; overflow: hidden; padding: 6px 8px;
     display: flex; flex-direction: column; gap: 4px; color: #edf3fb;
   }
-  .name { flex: none; font-weight: 620; letter-spacing: -.035em; line-height: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 12px rgba(8,11,16,.6); }
+  .name { flex: none; font-weight: 620; letter-spacing: -.035em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 12px rgba(8,11,16,.6); }
   .sub { flex: none; font: 500 10px/1.2 var(--mono); color: rgba(216,226,240,.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vertical .name { writing-mode: vertical-rl; transform: rotate(180deg); }
 

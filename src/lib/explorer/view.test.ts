@@ -1,6 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
-import { flight, frame, fromScreen, hold, raise, renormalize, toScreen, type Camera } from './view.ts';
+import { flight, frame, fromScreen, hold, raise, renormalize, toScreen, viewSpan, type Camera } from './view.ts';
 
 const vp = { width: 1200, height: 800 };
 
@@ -32,13 +32,22 @@ describe('the view', () => {
   });
 
   test('renormalizing moves between levels without moving the view', () => {
-    for (const cam of [{ level: 0, x: 6, y: .97 }, { level: 2, x: -1, y: .5 }, { level: 1, x: 3, y: 1.2 }, { level: 0, x: 5, y: .3 }]) {
+    for (const cam of [{ level: 0, x: 6, y: .97 }, { level: 2, x: -2.5, y: -1 }, { level: 1, x: 3, y: -.2 }, { level: 0, x: 5, y: .3 }]) {
       const moved = renormalize(cam);
       expect(absolute(moved).x).toBeCloseTo(absolute(cam).x, 9);
       expect(absolute(moved).y).toBeCloseTo(absolute(cam).y, 12);
     }
     expect(renormalize({ level: 0, x: 6, y: .97 }).level).toBe(1);
     expect(renormalize({ level: 0, x: 6, y: .5 }).level).toBe(0);
+    expect(renormalize(frame({ lo: 0, hi: 1 }, 0)).level).toBe(0);
+    expect(renormalize({ level: 0, x: -6, y: .5 }).level).toBe(-1);
+  });
+
+  test('nothing is above the top: a view is pulled down below it, at any level', () => {
+    for (const level of [-1, 0, 2]) {
+      const cam = renormalize({ level, x: 1, y: .99 });
+      expect(cam.y + viewSpan(cam.x) / 2).toBeCloseTo(1, 12);
+    }
   });
 
   test('a flight starts and ends at its endpoints, across levels', () => {
