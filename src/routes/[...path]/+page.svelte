@@ -87,9 +87,11 @@
   .app > :global(.panel) { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-left: 1px solid var(--line); }
   .stage { position: relative; min-width: 0; display: grid; }
   .stage > :global(.scene) { grid-area: 1 / 1; }
-  /* Its height is the scene's TOP inset, and it spans the scene: the probability axis starts below it. */
-  .top { position: absolute; top: 0; left: 0; right: 0; height: 56px; display: flex; align-items: center; gap: 22px; padding: 0 12px 0 20px; pointer-events: none; background: linear-gradient(to bottom, rgba(8,11,16,.9), rgba(8,11,16,.4)); }
-  .top > :global(*) { pointer-events: auto; }
+  /*
+   * Its height is the scene's TOP inset, and it spans the scene: the probability axis starts below it. It takes the
+   * pointer across its whole strip, so the boxes showing through it can't be hovered, clicked, or dragged there.
+   */
+  .top { position: absolute; top: 0; left: 0; right: 0; height: 56px; display: flex; align-items: center; gap: 22px; padding: 0 12px 0 20px; background: linear-gradient(to bottom, rgba(8,11,16,.9), rgba(8,11,16,.4)); }
   /* The codeword keeps its room; the telemetry takes what is left and drops the cells that don't fit. */
   .telemetry { flex: 1 1 0; min-width: 0; }
 
