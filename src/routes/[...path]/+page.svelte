@@ -69,7 +69,6 @@
   <main class="stage">
     <Scene />
     <header class="top">
-      <a class="brand" href="/" aria-label="Home">MK<span>/</span>bits</a>
       <Tape />
       <div class="telemetry"><Telemetry /></div>
     </header>
@@ -91,8 +90,6 @@
   /* Its height is the scene's TOP inset, and it spans the scene: the probability axis starts below it. */
   .top { position: absolute; top: 0; left: 0; right: 0; height: 56px; display: flex; align-items: center; gap: 22px; padding: 0 12px 0 20px; pointer-events: none; background: linear-gradient(to bottom, rgba(8,11,16,.9), rgba(8,11,16,.4)); }
   .top > :global(*) { pointer-events: auto; }
-  .brand { flex: none; white-space: nowrap; font: 700 14px/1 var(--mono); letter-spacing: -.03em; }
-  .brand span { color: var(--green); margin: 0 3px; }
   /* The codeword keeps its room; the telemetry takes what is left and drops the cells that don't fit. */
   .telemetry { flex: 1 1 0; min-width: 0; }
 

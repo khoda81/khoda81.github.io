@@ -27,31 +27,44 @@
   }
 </script>
 
-<label class="tape">
-  <span class="label">codeword</span>
-  <span class="path">{parts.path}#</span>
-  <input
-    value={parts.bits}
-    {oninput}
-    {onkeydown}
-    onblur={() => (entered = false)}
-    inputmode="numeric"
-    spellcheck="false"
-    autocomplete="off"
-    placeholder="∅"
-    style:width="calc({Math.max(parts.bits.length, 1) * 1.06}ch + 1ch)"
-    aria-label="Codeword of the view inside {parts.path}"
-  />
-  <span class="length">{parts.bits.length} bits</span>
-</label>
+<!-- The address reads as one string, MK/markets/#1011: home, the place's path, and the editable codeword inside it. -->
+<div class="tape">
+  <a class="home" href="/" aria-label="Home">MK</a>
+  {#if explorer.focus.place.kind === 'project'}
+    <!-- A project has nothing inside, so no codeword to show or type. -->
+    <span class="path">{parts.path}</span>
+  {:else}
+    <label>
+      <span class="path">{parts.path}#</span>
+      <input
+        value={parts.bits}
+        {oninput}
+        {onkeydown}
+        onblur={() => (entered = false)}
+        inputmode="numeric"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="∅"
+        style:width="{Math.max(parts.bits.length, 1) + .5}ch"
+        aria-label="Codeword of the view inside {parts.path}"
+      />
+    </label>
+  {/if}
+</div>
 
 <style>
-  .tape { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; font: 500 11px/1 var(--mono); color: var(--muted); cursor: text; }
-  .label, .length { flex: none; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
-  .path { flex: none; font: 500 12px/1 var(--mono); color: #8392a6; }
+  .tape { display: flex; align-items: baseline; min-width: 0; font: 600 14px/1 var(--mono); white-space: nowrap; }
+  .home { flex: none; color: var(--text); font-weight: 700; }
+  .home:hover { color: var(--green); }
+  label { display: flex; align-items: baseline; min-width: 0; cursor: text; }
+  /*
+   * Short of room, the path gives way first, to a stub, and then the codeword, which scrolls within itself. The
+   * stub is as wide as the shortest path, /#: any wider would open a gap between it and the bits.
+   */
+  .path { flex: 0 1000 auto; min-width: 2ch; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
   input {
-    all: unset; box-sizing: content-box; min-width: 2ch; max-width: 46ch; padding: 3px 5px; border-bottom: 1px solid transparent;
-    font: 600 13px/1 var(--mono); color: var(--green); letter-spacing: .06em; overflow: hidden; text-overflow: ellipsis;
+    all: unset; flex: 0 1 auto; min-width: 4ch; box-sizing: content-box; max-width: 46ch; border-bottom: 1px solid transparent;
+    color: var(--green); overflow: hidden; text-overflow: ellipsis;
   }
   input::placeholder { color: #4d5b6e; }
   input:hover { border-bottom-color: var(--line); }
