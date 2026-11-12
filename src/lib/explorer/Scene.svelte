@@ -512,7 +512,8 @@
 </div>
 
 <style>
-  .scene { position: relative; overflow: hidden; touch-action: none; user-select: none; background: var(--bg); cursor: grab; }
+  /* --ruler is the probability axis's column on the right, under the header; the bits axis stops where it starts. */
+  .scene { --ruler: 76px; position: relative; overflow: hidden; touch-action: none; user-select: none; background: var(--bg); cursor: grab; }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
   .labels { position: absolute; inset: 0; pointer-events: none; }
@@ -539,9 +540,9 @@
 
   .axis { position: absolute; color: rgba(216,226,240,.42); font: 500 9px/1 var(--mono); pointer-events: none; }
   /* Sized explicitly: the element's own default size would otherwise win over the insets. */
-  .bits { left: 0; bottom: 0; width: calc(100% - 76px); height: 34px; }
-  .probability { top: 56px; right: 0; width: 76px; height: calc(100% - 90px); }
-  .axis-name { position: absolute; right: 84px; bottom: 6px; font: 500 9px/1 var(--mono); color: rgba(216,226,240,.42); pointer-events: none; background: var(--bg); padding: 2px 4px; }
+  .bits { left: 0; bottom: 0; width: calc(100% - var(--ruler)); height: 34px; }
+  .probability { top: 56px; right: 0; width: var(--ruler); height: calc(100% - 90px); }
+  .axis-name { position: absolute; right: calc(var(--ruler) + 8px); bottom: 6px; font: 500 9px/1 var(--mono); color: rgba(216,226,240,.42); pointer-events: none; background: var(--bg); padding: 2px 4px; }
 
   .card {
     position: absolute; z-index: 3; width: 230px; padding: 12px 13px; pointer-events: none;
@@ -555,6 +556,7 @@
   dd { margin: 0; text-align: right; color: #d7e0ec; overflow-wrap: anywhere; }
 
   @media (max-width: 600px) {
+    .scene { --ruler: 0px; }
     .probability { display: none; }
   }
 

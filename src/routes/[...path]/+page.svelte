@@ -88,8 +88,8 @@
   .app > :global(.panel) { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-left: 1px solid var(--line); }
   .stage { position: relative; min-width: 0; display: grid; }
   .stage > :global(.scene) { grid-area: 1 / 1; }
-  /* Its height is the scene's TOP inset. */
-  .top { position: absolute; top: 0; left: 0; right: 76px; height: 56px; display: flex; align-items: center; gap: 22px; padding: 0 12px 0 20px; pointer-events: none; background: linear-gradient(to bottom, rgba(8,11,16,.9), rgba(8,11,16,.4)); }
+  /* Its height is the scene's TOP inset, and it spans the scene: the probability axis starts below it. */
+  .top { position: absolute; top: 0; left: 0; right: 0; height: 56px; display: flex; align-items: center; gap: 22px; padding: 0 12px 0 20px; pointer-events: none; background: linear-gradient(to bottom, rgba(8,11,16,.9), rgba(8,11,16,.4)); }
   .top > :global(*) { pointer-events: auto; }
   .brand { flex: none; white-space: nowrap; font: 700 14px/1 var(--mono); letter-spacing: -.03em; }
   .brand span { color: var(--green); margin: 0 3px; }
@@ -106,7 +106,7 @@
       border-left: none; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -16px 40px rgba(0, 0, 0, .5);
     }
     .stage { position: sticky; top: 0; height: 68svh; }
-    .top { right: 64px; padding: 0 14px; gap: 14px; }
+    .top { padding: 0 14px; gap: 14px; }
     .telemetry { display: none; }
   }
 </style>
