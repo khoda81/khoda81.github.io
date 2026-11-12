@@ -143,7 +143,12 @@ export class Slabs {
       this.#state.setXYZ(i, s.fill, s.glow, styleIndex[s.style]);
     }
     this.#geometry.instanceCount = count;
-    this.#rect.needsUpdate = this.#depth.needsUpdate = this.#color.needsUpdate = this.#state.needsUpdate = true;
+    // Only the boxes drawn this frame are sent: the buffers have room for far more than are ever on screen.
+    // With none there is nothing to send, and a range of length 0 would mean the whole buffer to WebGL.
+    for (const attribute of 0 < count ? [this.#rect, this.#depth, this.#color, this.#state] : []) {
+      attribute.addUpdateRange(0, count * attribute.itemSize);
+      attribute.needsUpdate = true;
+    }
     this.#material.uniforms.uTime!.value = time;
   }
 
