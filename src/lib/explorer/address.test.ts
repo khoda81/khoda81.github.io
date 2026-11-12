@@ -1,8 +1,8 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 import { PAGE_CODE, placeAt, places, root, spanAt, type Place } from '../code.ts';
-import { addressOf, cameraFor, href, leafHolding, parse, renumber, type Address } from './address.ts';
-import { frame, renormalize } from './view.ts';
+import { addressOf, cameraFor, href, parse, renumber, settle, type Address } from './address.ts';
+import { frame, renormalize, type Camera } from './view.ts';
 
 const at = (place: Place, bits = '', level = 0): Address => ({ focus: { place, level }, bits });
 const markets = placeAt('/markets/')!, natlas = placeAt('/interfaces/natlas/')!;
@@ -24,7 +24,7 @@ describe('addresses', () => {
 
   test('bits are read inside the place, as if it were all of [0, 1)', () => {
     const cam = cameraFor(at(markets, '1'), 0), s = spanAt(markets, 0);
-    expect(cam).toEqual(frame({ lo: (s.lo + s.hi) / 2, hi: s.hi }, 0));
+    expect<Camera>(cam).toEqual(frame({ lo: (s.lo + s.hi) / 2, hi: s.hi }, 0));
   });
 
   test('a view that leaves its place is addressed from the nearest place still holding it', () => {
@@ -35,9 +35,18 @@ describe('addresses', () => {
 
   test('a view inside a single project shows the project whole, and a project URL names nothing inside it', () => {
     const lobservatory = placeAt('/markets/lobservatory/')!;
-    expect(cameraFor(at(markets, '1011'), 0)).toEqual(renormalize(frame(spanAt(lobservatory, 0), 0)));
-    expect(leafHolding(cameraFor(at(markets, '1010'), 0), 0)).toBeNull();
+    expect<Camera>(cameraFor(at(markets, '1011'), 0)).toEqual(renormalize(frame(spanAt(lobservatory, 0), 0)));
+    const straddling = cameraFor(at(markets, '1010'), 0);
+    expect(settle(straddling, 0)).toEqual(straddling);
     expect(parse('/markets/lobservatory/', '#01')).toEqual(at(lobservatory));
+  });
+
+  test('no camera settles inside a project, however it got there', () => {
+    const qbar = spanAt(placeAt('/interfaces/qbar/')!, 0), whole = renormalize(frame(qbar, 0));
+    // Thrown deep into it, past the half-way mark of its height.
+    const deep = { level: 0, x: 31, y: qbar.lo + (qbar.hi - qbar.lo) * .3 };
+    expect<Camera>(settle(deep, 0)).toEqual(whole);
+    expect<Camera>(settle(whole, 0)).toEqual(whole);
   });
 
   test('zooming out of a place leaves it for the place around it', () => {

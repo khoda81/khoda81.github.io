@@ -19,10 +19,23 @@ const PROJECT_MARGIN = 1;
 /** A view's edges move by this share of its height before an interval stops fitting, so rounding never costs a bit. */
 const SLACK = 1e-6;
 
-/** The camera that shows `address`; one that would be inside a single project shows that project whole. */
-export function cameraFor(address: Address, t: number): Camera {
-  const cam = aim(address, t), leaf = leafHolding(cam, t);
-  return leaf ? renormalize(frame(leaf, cam.level)) : cam;
+declare const settled: unique symbol;
+
+/**
+ * A camera that shows something to read. A view inside a single project shows
+ * nothing more than the project whole, only harder to leave, so no Settled
+ * camera is one: `settle`, the only way to make one, shows the project whole.
+ */
+export type Settled = Camera & { readonly [settled]: true };
+
+export function settle(cam: Camera, t: number): Settled {
+  const normal = renormalize(cam), leaf = leafHolding(normal, t);
+  return (leaf ? renormalize(frame(leaf, normal.level)) : normal) as Settled;
+}
+
+/** The camera that shows `address`. */
+export function cameraFor(address: Address, t: number): Settled {
+  return settle(aim(address, t), t);
 }
 
 function aim({ focus: { place, level }, bits }: Address, t: number): Camera {
@@ -37,12 +50,8 @@ function aim({ focus: { place, level }, bits }: Address, t: number): Camera {
   return renormalize(frame(interval(bits), depth));
 }
 
-/**
- * The slice of the project that holds all of `cam`'s view, if one does. A
- * project has nothing inside it, so a view no taller than it shows nothing
- * more than the project whole, only harder to leave.
- */
-export function leafHolding(cam: Camera, t: number): Span | null {
+/** The slice of the project that holds all of `cam`'s view, if one does. */
+function leafHolding(cam: Camera, t: number): Span | null {
   const view = viewOf(cam), slack = (view.hi - view.lo) * SLACK;
   for (const place of places) {
     if (place.kind !== 'project') continue;

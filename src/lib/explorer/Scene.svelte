@@ -7,7 +7,7 @@
   import type { Project } from '../catalog.ts';
   import { BACKGROUND, colorOf, rgb } from '../palette.ts';
   import QBarFleet from '../components/QBarFleet.svelte';
-  import { addressOf, cameraFor, leafHolding, renumber, same, type Address } from './address.ts';
+  import { addressOf, cameraFor, renumber, same, settle, type Address, type Settled } from './address.ts';
   import { explorer } from './explorer.svelte.ts';
   import { boxAt, layout, renumberKey, type Box } from './layout.ts';
   import type { Slab, Slabs, Rgb } from './slabs.ts';
@@ -16,7 +16,8 @@
   if (browser) defineQBar();
 
   type Point = { x: number; y: number };
-  type Label = { key: string; x: number; y: number; z: number; w: number; h: number; size: number; text: string; sub: string | null; vertical: boolean; detail: Detail | null };
+  /** A box's name and details, in screen px: flat, over the box as drawn, and within the screen. */
+  type Label = { key: string; x: number; y: number; layer: number; w: number; h: number; size: number; text: string; sub: string | null; vertical: boolean; detail: Detail | null };
   /** What of a project fits in its box besides its name, so a growing box reveals more of it. */
   type Detail = { project: Project; accent: string; links: boolean; picture: boolean; summary: boolean };
   type Motion =
@@ -29,11 +30,13 @@
     | { kind: 'gliding'; velocity: Point };
 
   const CAPACITY = 3000;
-  /** Eye distance in CSS px, shared by the three.js camera and the label layer's CSS perspective. */
+  /** Eye distance in CSS px, of the three.js camera. */
   const PERSPECTIVE = 1600;
   const LIFT = 22;
   /** Strips kept clear of boxes for the header and the bits axis. */
   const TOP = 56, BOTTOM = 34;
+  /** How far labels keep from the screen's sides, so text in a box wider than the screen isn't on the edge. */
+  const EDGE = 12;
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -42,12 +45,12 @@
   const area = $derived<Viewport>({ width: vp.width, height: Math.max(1, vp.height - TOP - BOTTOM) });
   let labels = $state.raw<Label[]>([]);
   /** World rotation in three.js's convention, radians. */
-  let tilt = $state.raw<Point>({ x: 0, y: 0 });
+  let tilt: Point = { x: 0, y: 0 };
   let unavailable = $state(false);
   /** The pointer in host coordinates, for the hover card. */
   let cursor = $state.raw<Point | null>(null);
 
-  let cam: Camera = { level: 0, x: -CONTEXT_BITS - 2.5, y: .5 };
+  let cam: Settled = settle({ level: 0, x: -CONTEXT_BITS - 2.5, y: .5 }, 0);
   let motion: Motion = { kind: 'tracking' };
   /** The measure being shown: 0 is emphasis, 1 is effort, in between while morphing. */
   let blend = 0;
@@ -91,42 +94,26 @@
     if (motion.kind === 'flying') {
       // A frame's timestamp can precede the moment the flight was planned within it.
       const u = Math.min(1, Math.max(0, now - motion.started) / motion.path.duration);
-      cam = motion.path.at(ease(u));
+      cam = settle(motion.path.at(ease(u)), blend);
       if (u === 1) motion = { kind: 'tracking' };
     } else if (motion.kind === 'tracking') {
-      cam = flight(cam, cameraFor(explorer.here, blend)).at(1 - Math.exp(-dt * 10));
+      cam = settle(flight(cam, cameraFor(explorer.here, blend)).at(1 - Math.exp(-dt * 10)), blend);
     } else if (motion.kind === 'gliding') {
       const { velocity } = motion;
       const centre = { x: area.width / 2, y: area.height / 2 };
-      cam = hold(grabAt(centre), area, { x: centre.x + velocity.x * dt, y: centre.y + velocity.y * dt });
+      cam = settle(hold(grabAt(centre), area, { x: centre.x + velocity.x * dt, y: centre.y + velocity.y * dt }), blend);
       const decay = Math.exp(-dt * 4.5);
       motion = Math.hypot(velocity.x, velocity.y) < 10 ? { kind: 'free' } : { kind: 'gliding', velocity: { x: velocity.x * decay, y: velocity.y * decay } };
     }
     if (pendingZoom !== 0) {
       // Wheel steps are eased out over a few frames, so a mouse wheel zooms as smoothly as a trackpad.
       const step = Math.abs(pendingZoom) < 1e-4 ? pendingZoom : pendingZoom * (1 - Math.exp(-dt * 16));
-      const grab = grabAt(zoomAnchor), next = hold(grab, area, zoomAnchor, step);
-      if (readable(next)) {
-        cam = next;
-        pendingZoom -= step;
-      } else {
-        // Zoom in exactly as far as the view still spans more than one project.
-        let lo = 0, hi = step;
-        for (let i = 0; i < 24; i += 1) {
-          const mid = (lo + hi) / 2;
-          if (readable(hold(grab, area, zoomAnchor, mid))) lo = mid;
-          else hi = mid;
-        }
-        cam = hold(grab, area, zoomAnchor, lo);
-        pendingZoom = 0;
-      }
+      cam = settle(hold(grabAt(zoomAnchor), area, zoomAnchor, step), blend);
+      pendingZoom -= step;
     }
+    // Slices move while the measure morphs, so a still camera is settled again too.
+    cam = settle(cam, blend);
   }
-
-  /** Bits from the top of level 0, which compare across levels. */
-  const depthOf = (c: Camera) => c.x + PAGE_BITS * c.level;
-  /** Whether moving the camera to `next` still shows something new: inside one project there is nothing more, so zooming in stops there. */
-  const readable = (next: Camera) => depthOf(next) <= depthOf(cam) || !leafHolding(next, blend);
 
   function steer(now: number, dt: number) {
     if (reduced) return;
@@ -143,7 +130,8 @@
   }
 
   /** Builds this frame's slabs and labels; glow eases toward hover and focus so changes never pop. */
-  function compose(dt: number, hovered: Box | null): Slab[] {
+  /** `project` maps a point of the plane, in `area` px lifted by z, to where it is drawn on screen, in host px. */
+  function compose(dt: number, hovered: Box | null, project: (x: number, y: number, z: number) => Point): Slab[] {
     const { place, level } = explorer.focus;
     // A root is drawn only as the page slice one level out, and every page slice further out holds it.
     const focusKey = place.kind === 'root' ? `${level - 1}:${page.id}` : `${level}:${place.id}`;
@@ -156,7 +144,6 @@
 
     for (const box of boxes) {
       const { node } = box;
-      // The root column is always on the path, so it glows only when pointed at.
       const goal = box === hovered ? 1 : box.key === focusKey ? .75 : onPath(box) ? .4 : 0;
       const previous = glows.get(box.key) ?? 0;
       const glow = previous + (goal - previous) * k;
@@ -177,10 +164,13 @@
         style: node.kind === 'page' ? 'page' : 'plain'
       });
 
-      // Labels stick to the visible part of their box, so a box half off-screen stays named.
-      const vx0 = Math.max(box.x0, 0), vx1 = Math.min(box.x1, area.width);
-      const vy0 = Math.max(box.y0, 0), vy1 = Math.min(box.y1, area.height);
-      const lw = vx1 - vx0, lh = vy1 - vy0;
+      // A label covers its box as drawn, tilted and lifted, cut to the screen: it follows a box on screen and
+      // stays put in one bigger than the screen, whose edges are all that lifting moves.
+      const corners = [project(x0, y0, z), project(x1, y0, z), project(x0, y1, z), project(x1, y1, z)];
+      const xs = corners.map(c => c.x), ys = corners.map(c => c.y);
+      const sx0 = Math.max(EDGE, Math.min(...xs)), sx1 = Math.min(vp.width - EDGE, Math.max(...xs));
+      const sy0 = Math.max(TOP, Math.min(...ys)), sy1 = Math.min(TOP + area.height, Math.max(...ys));
+      const lw = sx1 - sx0, lh = sy1 - sy0;
       if (lw < 30 || lh < 12) continue;
       const text = name(node);
       const cap = node.kind === 'project' ? 40 : 56;
@@ -192,7 +182,7 @@
       if (size < 9) continue;
       const sub = !vertical && size * 1.3 + 30 < lh && 110 < lw ? quietLine(box) : null;
       nextLabels.push({
-        key: box.key, x: vx0, y: vy0 + TOP, z, w: lw, h: lh, size, text, sub, vertical,
+        key: box.key, x: sx0, y: sy0, layer: Math.round(glow * 100), w: lw, h: lh, size, text, sub, vertical,
         detail: node.kind === 'project' && sub ? detailOf(node.project, colorOf(node), lw, lh - (12 + size + 28)) : null
       });
     }
@@ -263,8 +253,7 @@
     }
     if (!gesture.moved) return;
     const zoom = 1 < points.length && 0 < gesture.spread ? Math.log2(spreadOf(points) / gesture.spread) : 0;
-    const next = hold(gesture.grab, area, at, zoom);
-    if (readable(next)) cam = next;
+    cam = settle(hold(gesture.grab, area, at, zoom), blend);
     const now = performance.now(), dt = Math.max(1, now - gesture.at) / 1000;
     gesture.velocity = { x: gesture.velocity.x * .6 + (at.x - gesture.last.x) / dt * .4, y: gesture.velocity.y * .6 + (at.y - gesture.last.y) / dt * .4 };
     gesture.last = at;
@@ -368,7 +357,12 @@
       camera.position.z = PERSPECTIVE;
 
       const raycaster = new three.Raycaster(), ndc = new three.Vector2(), plane = new three.Plane(new three.Vector3(0, 0, 1), 0);
-      const hit = new three.Vector3(), inverse = new three.Matrix4();
+      const hit = new three.Vector3(), inverse = new three.Matrix4(), point = new three.Vector3();
+      /** Where a point of the plane, in `area` px lifted by z, is drawn on screen, in host px. */
+      const project = (x: number, y: number, z: number): Point => {
+        point.set(x - vp.width / 2, vp.height / 2 - TOP - y, z).applyMatrix4(world.matrixWorld).project(camera);
+        return { x: (point.x + 1) / 2 * vp.width, y: (1 - point.y) / 2 * vp.height };
+      };
       toPlane = (clientX, clientY) => {
         const r = canvas.getBoundingClientRect();
         ndc.set((clientX - r.left) / r.width * 2 - 1, 1 - (clientY - r.top) / r.height * 2);
@@ -405,7 +399,7 @@
           // Every level looks alike, so the camera is kept in level 0 by renumbering all of them; a flight plans in its own.
           while (motion.kind !== 'flying' && cam.level !== 0) {
             const by = cam.level < 0 ? 1 : -1;
-            cam = { ...cam, level: cam.level + by };
+            cam = settle({ ...cam, level: cam.level + by }, blend);
             explorer.follow(followed = renumber(explorer.here, by));
             glows = new Map([...glows].map(([key, glow]) => [renumberKey(key, by), glow]));
           }
@@ -421,9 +415,9 @@
             explorer.reading = null;
           }
           host.style.cursor = gesture?.moved ? 'grabbing' : over ? 'pointer' : 'grab';
-          slabs.update(compose(dt, over), reduced ? 0 : now / 1000);
           world.rotation.set(tilt.x, tilt.y, 0);
           world.updateMatrixWorld();
+          slabs.update(compose(dt, over, project), reduced ? 0 : now / 1000);
           renderer.render(scene, camera);
         }
         request = requestAnimationFrame(tick);
@@ -457,13 +451,13 @@
 >
   <canvas bind:this={canvas} aria-hidden="true"></canvas>
 
-  <div class="labels" aria-hidden="true" style:perspective="{PERSPECTIVE}px">
-    <div class="plane" style:transform="rotateX({-tilt.x}rad) rotateY({tilt.y}rad)">
+  <div class="labels" aria-hidden="true">
       {#each labels as label (label.key)}
         <div
           class="label"
           class:vertical={label.vertical}
-          style:transform="translate3d({label.x}px, {label.y}px, {label.z}px)"
+          style:transform="translate({label.x}px, {label.y}px)"
+          style:z-index={label.layer}
           style:width="{label.w}px"
           style:height="{label.h}px"
         >
@@ -489,7 +483,6 @@
           {/if}
         </div>
       {/each}
-    </div>
   </div>
 
   <q-bar class="axis bits" orientation="horizontal" aria-hidden="true" {@attach bitsAxis}></q-bar>
@@ -522,8 +515,7 @@
   .scene { position: relative; overflow: hidden; touch-action: none; user-select: none; background: var(--bg); cursor: grab; }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
-  .labels { position: absolute; inset: 0; pointer-events: none; perspective-origin: 50% 50%; }
-  .plane { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 50% 50%; }
+  .labels { position: absolute; inset: 0; pointer-events: none; }
   .label {
     position: absolute; left: 0; top: 0; padding: 6px 8px;
     display: flex; flex-direction: column; gap: 4px; color: #edf3fb;

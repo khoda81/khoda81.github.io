@@ -84,13 +84,10 @@
   /* Its height is the scene's TOP inset. */
   .top { position: absolute; top: 0; left: 0; right: 76px; height: 56px; display: flex; align-items: center; gap: 22px; padding: 0 12px 0 20px; pointer-events: none; background: linear-gradient(to bottom, rgba(8,11,16,.9), rgba(8,11,16,.4)); }
   .top > :global(*) { pointer-events: auto; }
-  .brand { font: 700 14px/1 var(--mono); letter-spacing: -.03em; }
+  .brand { flex: none; white-space: nowrap; font: 700 14px/1 var(--mono); letter-spacing: -.03em; }
   .brand span { color: var(--green); margin: 0 3px; }
-  .telemetry { margin-left: auto; min-width: 0; overflow: hidden; }
-
-  @media (max-width: 1320px) {
-    .telemetry :global(.telemetry > div:nth-child(2)) { display: none; }
-  }
+  /* The codeword keeps its room; the telemetry takes what is left and drops the cells that don't fit. */
+  .telemetry { flex: 1 1 0; min-width: 0; }
 
   :global(body) { overflow: hidden; }
 
