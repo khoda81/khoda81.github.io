@@ -11,12 +11,10 @@ const themeColors: Record<string, string> = {
   play: '#ff9eb5'
 };
 
-/** A node's colour is its theme's; the root is neutral, and the page is the site's green. */
+/** A node's colour is its theme's; the root is neutral, and so is the page, which is the root one level in. */
 export function colorOf(node: Node): string {
   for (let n: Node | null = node; n; n = n.parent) {
-    if (n.kind === 'theme') return themeColors[n.theme.slug]!;
-    if (n.kind === 'project') return themeColors[n.theme.slug]!;
-    if (n.kind === 'page') return '#71ecc3';
+    if (n.kind === 'theme' || n.kind === 'project') return themeColors[n.theme.slug]!;
   }
   return '#d8e2f0';
 }

@@ -2,7 +2,9 @@
 import { describe, expect, test } from 'bun:test';
 import { PAGE_CODE, placeAt, places, root, spanAt, type Place } from '../code.ts';
 import { addressOf, cameraFor, href, parse, renumber, settle, type Address } from './address.ts';
-import { frame, renormalize, type Camera } from './view.ts';
+import { frame, fromScreen, hold, renormalize, type Camera } from './view.ts';
+
+const area = { width: 1140, height: 910 };
 
 const at = (place: Place, bits = '', level = 0): Address => ({ focus: { place, level }, bits });
 const markets = placeAt('/markets/')!, natlas = placeAt('/interfaces/natlas/')!;
@@ -78,6 +80,19 @@ describe('the recursion', () => {
     const cam = cameraFor(at(markets, '1', 2), 0), renumbered = cameraFor(at(markets, '1', 1), 0);
     expect({ ...cam, level: cam.level - 1 }).toEqual(renumbered);
     expect(() => renumber(at(markets), -1)).toThrow();
+  });
+
+  test('a camera thrown many levels out in one frame is renumbered back, level by level', () => {
+    // As the scene does: follow the camera with the address, then renumber both until the camera is in level 0.
+    let cam: Camera = settle(hold({ level: 0, ...fromScreen(cameraFor(at(markets), 0), area, 300, 444) }, area, { x: 300, y: 444 }, -21), 0);
+    let here = addressOf({ place: markets, level: 0 }, cam, 0);
+    expect(cam.level).toBeLessThan(-1);
+    while (cam.level !== 0) {
+      const by = cam.level < 0 ? 1 : -1;
+      cam = settle({ ...cam, level: cam.level + by }, 0);
+      here = renumber(here, by);
+    }
+    expect(addressOf(here.focus, cam, 0)).toEqual(here);
   });
 
   test('zooming out of the root leads into the root around it', () => {

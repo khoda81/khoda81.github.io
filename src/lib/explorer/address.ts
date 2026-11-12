@@ -90,8 +90,9 @@ export function addressOf(focus: Focus, cam: Camera, t: number): Address {
  * forever, and wherever they are is the root.
  */
 export function renumber({ focus: { place, level }, bits }: Address, by: 1 | -1): Address {
-  if (0 <= level + by) return { focus: { place, level: level + by }, bits };
-  // Level 0 numbered shallower: only the root holds a view inside its page, so its bits begin by entering it.
+  if (by === 1 || 0 < level) return { focus: { place, level: level + by }, bits };
+  // Numbered shallower, a root at level 0 or out says the same by entering its page one fewer time, which keeps it
+  // in reach of a URL; only the root holds a view inside its page, so its bits begin by entering it.
   if (place.kind !== 'root' || !bits.startsWith(PAGE_CODE)) throw new Error(`${pathOf(place)}#${bits} is not inside the page`);
   return { focus: { place, level }, bits: bits.slice(PAGE_CODE.length) };
 }
