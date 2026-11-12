@@ -129,7 +129,7 @@
 </aside>
 
 <style>
-  .panel { display: flex; flex-direction: column; gap: 26px; padding: 22px 24px 40px; border-left: 1px solid var(--line); background: #0a0e15; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .panel { display: flex; flex-direction: column; gap: 26px; padding: 22px 24px 40px; background: #0a0e15; }
 
   .trail { display: flex; flex-wrap: wrap; gap: 6px; font: 500 10px/1.4 var(--mono); color: var(--muted); }
   .trail a:hover, .trail a[aria-current] { color: var(--green); }

@@ -79,6 +79,13 @@
 
 <style>
   .app { display: grid; grid-template-columns: minmax(0, 1fr) min(460px, 38vw); height: 100svh; }
+  /*
+   * Beside the scene, the panel scrolls on its own and keeps its scroll from reaching the page. On a phone the scene
+   * stays put and the page scrolls the panel up over it, so the panel must not be a scroll container at all: one with
+   * `overscroll-behavior: contain` holds a swipe even with nothing to scroll, and the scene takes every touch for
+   * itself, so nothing would scroll the page.
+   */
+  .app > :global(.panel) { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-left: 1px solid var(--line); }
   .stage { position: relative; min-width: 0; display: grid; }
   .stage > :global(.scene) { grid-area: 1 / 1; }
   /* Its height is the scene's TOP inset. */
@@ -94,7 +101,11 @@
   @media (max-width: 900px) {
     :global(body) { overflow: auto; }
     .app { display: block; height: auto; }
-    .stage { height: 68svh; }
+    .app > :global(.panel) {
+      position: relative; overflow-y: visible; overscroll-behavior: auto;
+      border-left: none; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -16px 40px rgba(0, 0, 0, .5);
+    }
+    .stage { position: sticky; top: 0; height: 68svh; }
     .top { right: 64px; padding: 0 14px; gap: 14px; }
     .telemetry { display: none; }
   }
