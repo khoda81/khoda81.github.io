@@ -1,0 +1,1 @@
+import{R as e,S as t,g as n,x as r}from"../chunks/DAnlb_5e.js";function i(i,a){var o=t(),s=e(o);n(s,()=>a.children),r(i,o)}export{i as component};
