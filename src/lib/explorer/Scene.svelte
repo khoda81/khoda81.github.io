@@ -7,7 +7,7 @@
   import type { Project } from '../catalog.ts';
   import { BACKGROUND, colorOf, rgb } from '../palette.ts';
   import QBarFleet from '../components/QBarFleet.svelte';
-  import { addressOf, cameraFor, renumber, same, type Address } from './address.ts';
+  import { addressOf, cameraFor, leafHolding, renumber, same, type Address } from './address.ts';
   import { explorer } from './explorer.svelte.ts';
   import { boxAt, layout, renumberKey, type Box } from './layout.ts';
   import type { Slab, Slabs, Rgb } from './slabs.ts';
@@ -54,8 +54,6 @@
   let boxes: Box[] = [];
   /** The pointer on the (tilted) plane, in `area` coordinates. */
   let pointer: Point | null = null;
-  /** The pointer's position over the scene in [0, 1]², for parallax. */
-  let parallax: Point = { x: .5, y: .5 };
   let pendingZoom = 0;
   let zoomAnchor: Point = { x: 0, y: 0 };
   let glows = new Map<string, number>();
@@ -107,15 +105,33 @@
     if (pendingZoom !== 0) {
       // Wheel steps are eased out over a few frames, so a mouse wheel zooms as smoothly as a trackpad.
       const step = Math.abs(pendingZoom) < 1e-4 ? pendingZoom : pendingZoom * (1 - Math.exp(-dt * 16));
-      cam = hold(grabAt(zoomAnchor), area, zoomAnchor, step);
-      pendingZoom -= step;
+      const grab = grabAt(zoomAnchor), next = hold(grab, area, zoomAnchor, step);
+      if (readable(next)) {
+        cam = next;
+        pendingZoom -= step;
+      } else {
+        // Zoom in exactly as far as the view still spans more than one project.
+        let lo = 0, hi = step;
+        for (let i = 0; i < 24; i += 1) {
+          const mid = (lo + hi) / 2;
+          if (readable(hold(grab, area, zoomAnchor, mid))) lo = mid;
+          else hi = mid;
+        }
+        cam = hold(grab, area, zoomAnchor, lo);
+        pendingZoom = 0;
+      }
     }
   }
+
+  /** Bits from the top of level 0, which compare across levels. */
+  const depthOf = (c: Camera) => c.x + PAGE_BITS * c.level;
+  /** Whether moving the camera to `next` still shows something new: inside one project there is nothing more, so zooming in stops there. */
+  const readable = (next: Camera) => depthOf(next) <= depthOf(cam) || !leafHolding(next, blend);
 
   function steer(now: number, dt: number) {
     if (reduced) return;
     const s = now / 1000, k = 1 - Math.exp(-dt * 3);
-    const goal = { x: (parallax.y - .5) * .14 + Math.sin(s * .31) * .018, y: (parallax.x - .5) * .2 + Math.sin(s * .23 + 1) * .025 };
+    const goal = { x: Math.sin(s * .31) * .018, y: Math.sin(s * .23 + 1) * .025 };
     tilt = { x: tilt.x + (goal.x - tilt.x) * k, y: tilt.y + (goal.y - tilt.y) * k };
   }
 
@@ -170,14 +186,14 @@
       const cap = node.kind === 'project' ? 40 : 56;
       const across = Math.min(cap, lh * .38, (lw - 18) / (.64 * text.length));
       // Likely boxes are tall and narrow, few bits wide; name those along their height.
-      const along = Math.min(cap, lw * .5, (lw - 16) / 1.15, (lh - 18) / (.64 * text.length));
+      const along = Math.min(cap, lw * .5, (lh - 18) / (.64 * text.length));
       const vertical = across < 9 && 9 <= along;
       const size = vertical ? along : across;
       if (size < 9) continue;
       const sub = !vertical && size * 1.3 + 30 < lh && 110 < lw ? quietLine(box) : null;
       nextLabels.push({
         key: box.key, x: vx0, y: vy0 + TOP, z, w: lw, h: lh, size, text, sub, vertical,
-        detail: node.kind === 'project' && sub ? detailOf(node.project, colorOf(node), lw, lh - (12 + size * 1.15 + 28)) : null
+        detail: node.kind === 'project' && sub ? detailOf(node.project, colorOf(node), lw, lh - (12 + size + 28)) : null
       });
     }
     glows = nextGlows;
@@ -236,7 +252,6 @@
   function onpointermove(event: PointerEvent) {
     const r = host.getBoundingClientRect();
     cursor = { x: event.clientX - r.left, y: event.clientY - r.top };
-    parallax = { x: cursor.x / r.width, y: cursor.y / r.height };
     pointer = toPlane(event.clientX, event.clientY);
     if (!active.has(event.pointerId) || !gesture) return;
     active.set(event.pointerId, pointer);
@@ -248,7 +263,8 @@
     }
     if (!gesture.moved) return;
     const zoom = 1 < points.length && 0 < gesture.spread ? Math.log2(spreadOf(points) / gesture.spread) : 0;
-    cam = hold(gesture.grab, area, at, zoom);
+    const next = hold(gesture.grab, area, at, zoom);
+    if (readable(next)) cam = next;
     const now = performance.now(), dt = Math.max(1, now - gesture.at) / 1000;
     gesture.velocity = { x: gesture.velocity.x * .6 + (at.x - gesture.last.x) / dt * .4, y: gesture.velocity.y * .6 + (at.y - gesture.last.y) / dt * .4 };
     gesture.last = at;
@@ -267,7 +283,6 @@
   function onpointerleave() {
     if (active.size) return;
     pointer = cursor = null;
-    parallax = { x: .5, y: .5 };
   }
 
   function onwheel(event: WheelEvent) {
@@ -510,12 +525,13 @@
   .labels { position: absolute; inset: 0; pointer-events: none; perspective-origin: 50% 50%; }
   .plane { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 50% 50%; }
   .label {
-    position: absolute; left: 0; top: 0; overflow: hidden; padding: 6px 8px;
+    position: absolute; left: 0; top: 0; padding: 6px 8px;
     display: flex; flex-direction: column; gap: 4px; color: #edf3fb;
   }
-  .name { flex: none; font-weight: 620; letter-spacing: -.035em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 12px rgba(8,11,16,.6); }
+  /* Names are sized to fit their box, so only a name too long for it is cut, along its line; descenders hang out freely. */
+  .name { flex: none; font-weight: 620; letter-spacing: -.035em; line-height: .95; white-space: nowrap; overflow-x: clip; text-overflow: ellipsis; text-shadow: 0 1px 12px rgba(8,11,16,.6); }
   .sub { flex: none; font: 500 10px/1.2 var(--mono); color: rgba(216,226,240,.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .vertical .name { writing-mode: vertical-rl; transform: rotate(180deg); }
+  .vertical .name { writing-mode: vertical-rl; transform: rotate(180deg); overflow-x: visible; overflow-y: clip; }
 
   .detail { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
   .links { flex: none; display: flex; flex-wrap: wrap; gap: 5px; max-height: 24px; overflow: hidden; }

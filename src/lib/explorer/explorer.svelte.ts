@@ -1,6 +1,6 @@
 import { goto } from '$app/navigation';
 import { isPlace, root, type Focus, type Measure, type Place } from '../code.ts';
-import { href, same, type Address } from './address.ts';
+import { href, type Address } from './address.ts';
 import type { Box } from './layout.ts';
 import { CONTEXT_BITS, type Camera } from './view.ts';
 
@@ -50,10 +50,16 @@ class Explorer {
     this.#settling = setTimeout(() => void goto(this.href, { shallow: true, replace: true }), SETTLE_MS);
   }
 
-  /** Takes on the address the URL already shows, as after Back or an edited URL. */
+  /**
+   * Takes on the address the URL shows, as after Back or an edited URL. A URL
+   * can't tell the levels apart, so one that already names where the reader
+   * is, or is going, is nothing new: this page's own navigations come back
+   * here too, and must not trade the copy of a place the reader chose for
+   * its copy in level 0.
+   */
   arrive(address: Address): void {
     clearTimeout(this.#settling);
-    if (!same(address, this.here)) this.here = address;
+    if (href(address) !== this.href) this.here = address;
   }
 
   /** Moves through the tree of places: out to the parent, in to the first child, or across to a sibling. */

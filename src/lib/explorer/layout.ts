@@ -1,5 +1,5 @@
 import { PAGE_BITS, root, spanAt, type Node } from '../code.ts';
-import { fromScreen, raise, toScreen, type Camera, type Viewport } from './view.ts';
+import { fromScreen, pxPerBit, raise, toScreen, type Camera, type Viewport } from './view.ts';
 
 /**
  * A node as drawn this frame. Boxes tile the plane: siblings split the height,
@@ -27,16 +27,22 @@ export type Box = {
 
 /** Below this height a box and everything inside it is too thin to see. */
 const MIN_HEIGHT = .6;
+/**
+ * How far past the layout area boxes are still drawn, in px: the scene shows
+ * them under its header and axis strips, and its tilt brings a little more of
+ * each edge into view.
+ */
+const BLEED = 120;
 
 /**
  * Every box visible from `cam`, parents before children. A root is only ever
  * drawn as the page slice of the root around it, so traversal starts from as
  * many levels out as it takes for one root's children to cover the screen's
- * left edge and bottom, and descends into the page until boxes are sub-pixel.
+ * left edge and bottom, bleed included, and descends into the page until boxes are sub-pixel.
  */
 export function layout(cam: Camera, vp: Viewport, t: number, limit: number): Box[] {
   let base = cam;
-  while (base.x < 0 || fromScreen(base, vp, 0, vp.height).p < 0) base = raise(base);
+  while (base.x * pxPerBit(vp) < BLEED || fromScreen(base, vp, 0, vp.height + BLEED).p < 0) base = raise(base);
   const boxes: Box[] = [];
 
   /** `depth` counts recursion levels below the base; `parentP` is the parent's probability in base coordinates. */
@@ -50,7 +56,7 @@ export function layout(cam: Camera, vp: Viewport, t: number, limit: number): Box
     const bottomRight = toScreen(base, vp, node.kind === 'project' ? Infinity : xRight, lo);
     const x0 = topLeft.x, y0 = topLeft.y, x1 = bottomRight.x, y1 = bottomRight.y;
     // Children lie inside this box's height and to its right, so they are culled with it.
-    if (y1 < 0 || vp.height < y0 || vp.width < x0 || y1 - y0 < MIN_HEIGHT) return;
+    if (y1 < -BLEED || vp.height + BLEED < y0 || vp.width + BLEED < x0 || y1 - y0 < MIN_HEIGHT) return;
 
     const level = base.level + depth;
     if (node.kind !== 'root') {

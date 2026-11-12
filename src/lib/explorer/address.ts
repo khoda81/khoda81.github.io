@@ -1,4 +1,4 @@
-import { codeword, interval, PAGE_CODE, pathOf, placeAt, root, spanAt, type Focus, type Place, type Span } from '../code.ts';
+import { codeword, interval, PAGE_CODE, pathOf, placeAt, places, root, spanAt, type Focus, type Place, type Span } from '../code.ts';
 import { frame, raise, renormalize, viewSpan, type Camera } from './view.ts';
 
 /**
@@ -19,8 +19,13 @@ const PROJECT_MARGIN = 1;
 /** A view's edges move by this share of its height before an interval stops fitting, so rounding never costs a bit. */
 const SLACK = 1e-6;
 
-/** The camera that shows `address`. */
-export function cameraFor({ focus: { place, level }, bits }: Address, t: number): Camera {
+/** The camera that shows `address`; one that would be inside a single project shows that project whole. */
+export function cameraFor(address: Address, t: number): Camera {
+  const cam = aim(address, t), leaf = leafHolding(cam, t);
+  return leaf ? renormalize(frame(leaf, cam.level)) : cam;
+}
+
+function aim({ focus: { place, level }, bits }: Address, t: number): Camera {
   if (bits === '') return renormalize(frame(spanAt(place, t), level, place.kind === 'project' ? PROJECT_MARGIN : 0));
   if (place.kind !== 'root') return renormalize(frame(inside(spanAt(place, t), interval(bits)), level));
   // The page's bits are read as levels, so arbitrarily deep codewords keep their precision.
@@ -30,6 +35,21 @@ export function cameraFor({ focus: { place, level }, bits }: Address, t: number)
     depth += 1;
   }
   return renormalize(frame(interval(bits), depth));
+}
+
+/**
+ * The slice of the project that holds all of `cam`'s view, if one does. A
+ * project has nothing inside it, so a view no taller than it shows nothing
+ * more than the project whole, only harder to leave.
+ */
+export function leafHolding(cam: Camera, t: number): Span | null {
+  const view = viewOf(cam), slack = (view.hi - view.lo) * SLACK;
+  for (const place of places) {
+    if (place.kind !== 'project') continue;
+    const slice = spanAt(place, t);
+    if (slice.lo <= view.lo + slack && view.hi - slack <= slice.hi) return slice;
+  }
+  return null;
 }
 
 /**
@@ -72,12 +92,16 @@ export function href({ focus, bits }: Address): string {
   return pathOf(focus.place) + (bits ? `#${bits}` : '');
 }
 
-/** The address a URL names, or undefined for a path that names no place. A hash that isn't bits names nothing more than the place. */
+/**
+ * The address a URL names, or undefined for a path that names no place. A
+ * hash that isn't bits names nothing more than the place, and neither does
+ * any hash on a project, which has nothing inside.
+ */
 export function parse(pathname: string, hash: string): Address | undefined {
   const place = placeAt(pathname);
   if (!place) return undefined;
   const bits = hash.replace(/^#/, '');
-  return { focus: { place, level: 0 }, bits: /^[01]*$/.test(bits) ? bits : '' };
+  return { focus: { place, level: 0 }, bits: place.kind !== 'project' && /^[01]*$/.test(bits) ? bits : '' };
 }
 
 export function same(a: Address, b: Address): boolean {

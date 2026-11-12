@@ -1,8 +1,8 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 import { PAGE_CODE, placeAt, places, root, spanAt, type Place } from '../code.ts';
-import { addressOf, cameraFor, href, parse, renumber, type Address } from './address.ts';
-import { frame } from './view.ts';
+import { addressOf, cameraFor, href, leafHolding, parse, renumber, type Address } from './address.ts';
+import { frame, renormalize } from './view.ts';
 
 const at = (place: Place, bits = '', level = 0): Address => ({ focus: { place, level }, bits });
 const markets = placeAt('/markets/')!, natlas = placeAt('/interfaces/natlas/')!;
@@ -17,7 +17,7 @@ describe('addresses', () => {
   });
 
   test('bits inside a place come back as typed', () => {
-    for (const address of [at(markets, '1011'), at(natlas, '0'), at(root, '0110'), at(root, PAGE_CODE.repeat(3) + '0101'), at(markets, '1', 1)]) {
+    for (const address of [at(markets, '1010'), at(root, '0110'), at(root, PAGE_CODE.repeat(3) + '0101'), at(markets, '1', 1)]) {
       expect(addressOf(address.focus, cameraFor(address, 0), 0)).toEqual(address);
     }
   });
@@ -31,6 +31,13 @@ describe('addresses', () => {
     const address = addressOf({ place: natlas, level: 0 }, cameraFor(at(markets), 0), 0);
     expect(address.focus.place).toBe(root);
     expect(cameraFor(address, 0).y).toBeCloseTo((spanAt(markets, 0).lo + spanAt(markets, 0).hi) / 2, 1);
+  });
+
+  test('a view inside a single project shows the project whole, and a project URL names nothing inside it', () => {
+    const lobservatory = placeAt('/markets/lobservatory/')!;
+    expect(cameraFor(at(markets, '1011'), 0)).toEqual(renormalize(frame(spanAt(lobservatory, 0), 0)));
+    expect(leafHolding(cameraFor(at(markets, '1010'), 0), 0)).toBeNull();
+    expect(parse('/markets/lobservatory/', '#01')).toEqual(at(lobservatory));
   });
 
   test('zooming out of a place leaves it for the place around it', () => {
