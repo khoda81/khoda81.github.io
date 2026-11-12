@@ -1,20 +1,36 @@
 <script lang="ts">
-  import '../app.css';
+  import '../../app.css';
+  import { browser } from '$app/env';
+  import { afterNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
   import Panel from '#lib/components/Panel.svelte';
   import Tape from '#lib/components/Tape.svelte';
   import Telemetry from '#lib/components/Telemetry.svelte';
-  import { root } from '#lib/code.ts';
-  import { explorer, fromHash, same } from '#lib/explorer/explorer.svelte.ts';
+  import { pathOf, root, type Place } from '#lib/code.ts';
+  import { parse } from '#lib/explorer/address.ts';
+  import { explorer } from '#lib/explorer/explorer.svelte.ts';
   import Scene from '#lib/explorer/Scene.svelte';
   import { startLive } from '#lib/live.svelte.ts';
+
+  let { data }: { data: { place: Place } } = $props();
+
+  /** The address in the URL bar; the route's own place when prerendering, which has no hash. */
+  const fromUrl = () => (browser && parse(location.pathname, location.hash)) || { focus: { place: data.place, level: 0 }, bits: '' };
+  explorer.arrive(fromUrl());
+  // Links, Back, and an edited hash all change the URL without this page asking; it reads where they led.
+  afterNavigate(() => explorer.arrive(fromUrl()));
+
+  /** The place this URL is about, for search engines and link previews. */
+  const named = $derived(explorer.focus.level === 0 ? explorer.focus.place : root);
+  const title = $derived(named.kind === 'root' ? 'Mahdi Khodabandeh (khoda81) — ML, Compression & Systems' : `${named.kind === 'theme' ? named.theme.name : named.project.name} — Mahdi Khodabandeh (khoda81)`);
+  const canonical = $derived(`https://khoda81.github.io${pathOf(named)}`);
 
   const keys: Record<string, () => void> = {
     ArrowLeft: () => explorer.step('out'),
     ArrowRight: () => explorer.step('in'),
     ArrowUp: () => explorer.step('previous'),
     ArrowDown: () => explorer.step('next'),
-    Escape: () => explorer.go({ place: root, level: 0 })
+    Escape: () => explorer.go({ focus: { place: root, level: 0 }, bits: '' })
   };
 
   function onkeydown(event: KeyboardEvent) {
@@ -27,19 +43,25 @@
   }
 
   onMount(() => {
-    const sync = () => {
-      const focus = fromHash(location.hash);
-      if (focus && !same(focus, explorer.focus)) explorer.focus = focus;
-    };
-    sync();
+    // Back and Forward between this page's own entries are shallow, so no navigation reports them.
+    const sync = () => explorer.arrive(fromUrl());
+    addEventListener('popstate', sync);
     addEventListener('hashchange', sync);
     const stop = startLive();
     return () => {
+      removeEventListener('popstate', sync);
       removeEventListener('hashchange', sync);
       stop();
     };
   });
 </script>
+
+<svelte:head>
+  <title>{title}</title>
+  <link rel="canonical" href={canonical} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:title" content={title} />
+</svelte:head>
 
 <svelte:window {onkeydown} />
 
@@ -47,7 +69,7 @@
   <main class="stage">
     <Scene />
     <header class="top">
-      <a class="brand" href="#00000" aria-label="Home">MK<span>/</span>bits</a>
+      <a class="brand" href="/" aria-label="Home">MK<span>/</span>bits</a>
       <Tape />
       <div class="telemetry"><Telemetry /></div>
     </header>

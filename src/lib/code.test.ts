@@ -1,17 +1,12 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
-import { codeword, decode, encode, endOf, find, page, PAGE_CODE, places, root, type Measure, type Node, type Span } from './code.ts';
+import { codeword, interval, page, PAGE_CODE, pathOf, placeAt, places, root, type Measure, type Node } from './code.ts';
 
 const all: Node[] = [];
 (function walk(node: Node) {
   all.push(node);
   node.children.forEach(walk);
 })(root);
-
-const dyadic = (bits: string): Span => {
-  const lo = bits === '' ? 0 : parseInt(bits, 2) / 2 ** bits.length;
-  return { lo, hi: lo + 2 ** -bits.length };
-};
 
 describe('the interval tree', () => {
   for (const measure of ['emphasis', 'effort'] as Measure[]) {
@@ -43,30 +38,16 @@ describe('codewords', () => {
     expect(codeword({ lo: .5, hi: .5000001 })).toBe('1' + '0'.repeat(23));
   });
 
-  test('each place’s codeword lands in its end slice and decodes back to it, at any depth', () => {
-    for (const place of places) {
-      const bits = encode({ place, level: 0 });
-      const span = dyadic(bits), end = endOf(place).spans.emphasis;
-      expect(end.lo <= span.lo && span.hi <= end.hi).toBe(true);
-      for (const level of [0, 1, 3]) expect(decode(encode({ place, level }))).toEqual({ place, level });
-    }
+  test('name the interval they were read from', () => {
+    for (const bits of ['', '0', '1', '1011', '0000000001', '1'.repeat(40)]) expect(codeword(interval(bits))).toBe(bits);
   });
+});
 
-  test('a prefix of a codeword decodes to an ancestor', () => {
-    for (const place of places) {
-      const bits = encode({ place, level: 0 });
-      for (let n = 0; n <= bits.length; n += 1) {
-        let ancestor: Node | null = place;
-        const decoded = decode(bits.slice(0, n))!.place;
-        while (ancestor && ancestor !== decoded) ancestor = ancestor.parent;
-        expect(ancestor).toBe(decoded);
-      }
-    }
-  });
-
-  test('anything that is not bits is not a codeword', () => {
-    expect(decode('natlas')).toBeUndefined();
-    expect(decode('')).toEqual({ place: root, level: 0 });
-    expect(find('natlas')?.kind).toBe('project');
+describe('paths', () => {
+  test('name every place, and only places', () => {
+    for (const place of places) expect(placeAt(pathOf(place))).toBe(place);
+    expect(pathOf(placeAt('/markets/lobservatory')!)).toBe('/markets/lobservatory/');
+    expect(placeAt('/lobservatory/')).toBeUndefined();
+    expect(placeAt('/markets/natlas/')).toBeUndefined();
   });
 });

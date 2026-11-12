@@ -3,19 +3,22 @@
   import { decimalTicks, ladder } from '@qbar/qbar';
   import { defineQBar, type QBarElement } from '@qbar/qbar/element';
   import { onMount, untrack } from 'svelte';
-  import { codeword, endOf, entropy, isPlace, lineage, name, page, PAGE_BITS, root, spanAt, type Focus, type Node } from '../code.ts';
-  import type { ProjectNode } from '../code.ts';
+  import { codeword, entropy, isPlace, lineage, name, page, PAGE_BITS, PAGE_CODE, pathOf, root, spanAt, type Node } from '../code.ts';
+  import type { Project } from '../catalog.ts';
   import { BACKGROUND, colorOf, rgb } from '../palette.ts';
   import QBarFleet from '../components/QBarFleet.svelte';
+  import { addressOf, cameraFor, same, type Address } from './address.ts';
   import { explorer } from './explorer.svelte.ts';
   import { boxAt, layout, type Box } from './layout.ts';
   import type { Slab, Slabs, Rgb } from './slabs.ts';
-  import { CONTEXT_BITS, flight, frame, fromScreen, hold, pxPerBit, viewSpan, type Camera, type Flight, type Grab, type Viewport } from './view.ts';
+  import { CONTEXT_BITS, flight, fromScreen, hold, pxPerBit, viewSpan, type Camera, type Flight, type Grab, type Viewport } from './view.ts';
 
   if (browser) defineQBar();
 
   type Point = { x: number; y: number };
-  type Label = { key: string; x: number; y: number; z: number; w: number; h: number; size: number; text: string; sub: string | null; quiet: boolean; vertical: boolean };
+  type Label = { key: string; x: number; y: number; z: number; w: number; h: number; size: number; text: string; sub: string | null; vertical: boolean; detail: Detail | null };
+  /** What of a project fits in its box besides its name, so a growing box reveals more of it. */
+  type Detail = { project: Project; accent: string; links: boolean; picture: boolean; summary: boolean };
   type Motion =
     | { kind: 'flying'; path: Flight; started: number }
     /** Holding the focus in frame, which moves while the measure changes. */
@@ -41,11 +44,6 @@
   /** World rotation in three.js's convention, radians. */
   let tilt = $state.raw<Point>({ x: 0, y: 0 });
   let unavailable = $state(false);
-  /**
-   * The focused project, decoded: its preview or summary laid in the plane to
-   * the right of its links, where the tree would otherwise be empty.
-   */
-  let exhibit = $state.raw<{ project: ProjectNode; x: number; y: number; w: number } | null>(null);
   /** The pointer in host coordinates, for the hover card. */
   let cursor = $state.raw<Point | null>(null);
 
@@ -71,14 +69,15 @@
   const colors = new Map<Node, Rgb>();
   const colorFor = (node: Node) => colors.get(node) ?? colors.set(node, rgb(colorOf(node))).get(node)!;
   const ease = (u: number) => (u < .5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2);
-  /** Projects have only links inside, so they are framed with their neighbours around them. */
-  const targetOf = (focus: Focus) => frame(spanAt(focus.place, blend), focus.level, focus.place.kind === 'project' ? 1 : 0);
+  /** The address this scene last derived from a hand-moved camera, which it is already showing. */
+  let followed: Address | null = null;
 
   $effect(() => {
-    const focus = explorer.focus;
+    const here = explorer.here;
     untrack(() => {
+      if (here === followed) return;
       pendingZoom = 0;
-      const target = targetOf(focus);
+      const target = cameraFor(here, blend);
       if (reduced) {
         cam = target;
         motion = { kind: 'tracking' };
@@ -92,11 +91,12 @@
 
   function moveCamera(now: number, dt: number) {
     if (motion.kind === 'flying') {
-      const u = Math.min(1, (now - motion.started) / motion.path.duration);
+      // A frame's timestamp can precede the moment the flight was planned within it.
+      const u = Math.min(1, Math.max(0, now - motion.started) / motion.path.duration);
       cam = motion.path.at(ease(u));
       if (u === 1) motion = { kind: 'tracking' };
     } else if (motion.kind === 'tracking') {
-      cam = flight(cam, targetOf(explorer.focus)).at(1 - Math.exp(-dt * 10));
+      cam = flight(cam, cameraFor(explorer.here, blend)).at(1 - Math.exp(-dt * 10));
     } else if (motion.kind === 'gliding') {
       const { velocity } = motion;
       const centre = { x: area.width / 2, y: area.height / 2 };
@@ -121,8 +121,6 @@
 
   function quietLine(box: Box): string | null {
     switch (box.node.kind) {
-      case 'link': return new URL(box.node.link.href, location.href).host;
-      case 'end': return `stop here · ${(-Math.log2(box.p)).toFixed(2)} bits`;
       case 'page': return `1111 · contains everything again`;
       default: return `p ${box.p.toFixed(3)} · ${box.bits.toFixed(2)} bits`;
     }
@@ -157,9 +155,9 @@
         y: vp.height / 2 - TOP - (y0 + y1) / 2,
         w, h, z,
         color: colorFor(node),
-        fill: node.kind === 'end' ? .45 : node.kind === 'root' ? .06 : node.kind === 'link' ? .2 + .5 * Math.sqrt(box.p) : .15 + .7 * Math.sqrt(box.p),
+        fill: node.kind === 'root' ? .06 : .15 + .7 * Math.sqrt(box.p),
         glow,
-        style: node.kind === 'end' || node.kind === 'page' || node.kind === 'link' ? node.kind : 'plain'
+        style: node.kind === 'page' ? 'page' : 'plain'
       });
 
       // Labels stick to the visible part of their box, so a box half off-screen stays named.
@@ -168,48 +166,49 @@
       const lw = vx1 - vx0, lh = vy1 - vy0;
       if (lw < 30 || lh < 12) continue;
       const text = name(node);
-      const quiet = node.kind === 'end' || node.kind === 'link';
-      const cap = quiet ? 15 : 56;
+      const cap = node.kind === 'project' ? 40 : 56;
       const across = Math.min(cap, lh * .38, (lw - 18) / (.64 * text.length));
       // Likely boxes are tall and narrow, few bits wide; name those along their height.
       const along = Math.min(cap, lw * .5, (lh - 18) / (.64 * text.length));
       const vertical = across < 9 && 9 <= along;
       const size = vertical ? along : across;
       if (size < 9) continue;
+      const sub = !vertical && size * 1.3 + 30 < lh && 110 < lw ? quietLine(box) : null;
       nextLabels.push({
-        key: box.key, x: vx0, y: vy0 + TOP, z, w: lw, h: lh, size, text,
-        sub: !vertical && size * 1.3 + 30 < lh && 110 < lw ? quietLine(box) : null,
-        quiet,
-        vertical
+        key: box.key, x: vx0, y: vy0 + TOP, z, w: lw, h: lh, size, text, sub, vertical,
+        detail: node.kind === 'project' && sub ? detailOf(node.project, colorOf(node), lw, lh - (12 + size + 28)) : null
       });
     }
     glows = nextGlows;
     labels = nextLabels;
-    exhibit = placeExhibit(focusKey);
     // Lifted boxes go last, so they and their shadows cover the plane. The sort is stable, so ties keep tree order.
     return slabs.sort((a, b) => a.z - b.z);
   }
 
-  function placeExhibit(focusKey: string): typeof exhibit {
-    const { place } = explorer.focus;
-    const at = boxes.findIndex(box => box.key === focusKey);
-    if (place.kind !== 'project' || at < 0 || motion.kind === 'flying') return null;
-    const box = boxes[at]!;
-    // Its links follow it in preorder; the exhibit starts past the widest.
-    const right = boxes.slice(at + 1).filter(b => b.node.parent === place && b.level === box.level).reduce((x, b) => Math.max(x, b.x1), box.x1);
-    // It may run under the probability axis, which is translucent.
-    const x = right + 32, w = Math.min(620, area.width - x - 24);
-    if (w < 240 || box.y1 < 0 || area.height < box.y0) return null;
-    return { project: place, x, y: Math.min(Math.max((box.y0 + box.y1) / 2, 90), area.height - 90) + TOP, w };
+  /** Minimum width and height, in px, at which each kind of preview is still legible. */
+  const PICTURE = { image: [200, 110], 'qbar-fleet': [300, 230] } as const;
+  const LINKS = 32, SUMMARY = 80;
+
+  /**
+   * The parts of `project` that fit a `width`-wide box with `room` px under its
+   * name: links first, then its picture, then its summary, which stands in
+   * for the picture when it has none.
+   */
+  function detailOf(project: Project, accent: string, width: number, room: number): Detail | null {
+    const links = 0 < project.links.length && 130 <= width && LINKS <= room;
+    room -= links ? LINKS : 0;
+    const kind = project.preview?.kind;
+    const minimum = kind === 'image' || kind === 'qbar-fleet' ? PICTURE[kind] : null;
+    const picture = minimum !== null && minimum[0] <= width && minimum[1] <= room;
+    room -= picture ? minimum[1] : 0;
+    const summary = 190 <= width && SUMMARY <= room;
+    return links || picture || summary ? { project, accent, links, picture, summary } : null;
   }
 
   function activate(box: Box | undefined) {
     if (!box) return;
     const { node, level } = box;
-    if (node.kind === 'link') window.open(node.link.href, '_blank', 'noopener');
-    else if (node.kind === 'end') explorer.go({ place: node.parent as Focus['place'], level });
-    else if (node.kind === 'page') explorer.go({ place: root, level: level + 1 });
-    else explorer.go({ place: node, level });
+    explorer.go({ focus: node.kind === 'page' ? { place: root, level: level + 1 } : { place: node, level }, bits: '' });
   }
 
   // Pointer gestures: one pointer drags, two pinch; a press that barely moves is a click.
@@ -225,7 +224,8 @@
   }
 
   function onpointerdown(event: PointerEvent) {
-    if (event.button !== 0) return;
+    // A link inside a box is followed, not dragged.
+    if (event.button !== 0 || (event.target as Element).closest('a')) return;
     host.setPointerCapture(event.pointerId);
     active.set(event.pointerId, toPlane(event.clientX, event.clientY));
     pendingZoom = 0;
@@ -300,17 +300,17 @@
   const details = $derived.by(() => {
     const box = hovered;
     if (!box) return null;
-    const { node } = box, blendNow = explorer.measure === 'effort' ? 1 : 0;
-    const place = node.kind === 'end' ? node.parent! : node;
-    const bits = isPlace(place) ? codeword(endOf(place).spans.emphasis) : codeword(spanAt(node, 0));
+    const { node } = box, t = explorer.t;
     return {
-      title: name(place === node ? node : place),
-      kind: node.kind === 'project' ? node.project.kind : node.kind === 'theme' ? 'THEME' : node.kind === 'link' ? 'LINK' : node.kind === 'page' ? 'RECURSION' : node.kind === 'end' ? 'END OF MESSAGE' : 'ROOT',
+      title: name(node),
+      kind: node.kind === 'project' ? node.project.kind : node.kind === 'theme' ? 'THEME' : node.kind === 'page' ? 'RECURSION' : 'ROOT',
       rows: [
         ['p given parent', box.p.toFixed(4)],
         ['−log₂ P', `${box.bits.toFixed(3)} bits`],
-        ['codeword', '1111'.repeat(box.level) + bits || '∅'],
-        ...(0 < node.children.length ? [['H at node', `${entropy(node, blendNow).toFixed(3)} bits`]] : []),
+        // The biggest dyadic interval inside the box, from the outermost root.
+        ['codeword', PAGE_CODE.repeat(box.level) + codeword(spanAt(node, t)) || '∅'],
+        ...(isPlace(node) && box.level === 0 ? [['path', pathOf(node)]] : []),
+        ...(0 < node.children.length ? [['H at node', `${entropy(node, t).toFixed(3)} bits`]] : []),
         ...(node.kind === 'project' && node.project.commits ? [['commits', String(node.project.commits)]] : [])
       ] as [string, string][]
     };
@@ -363,7 +363,8 @@
 
       let size = { width: 0, height: 0 };
       const tick = (now: number) => {
-        const dt = Math.min(.05, (now - last) / 1000);
+        // The first frame's timestamp can precede the mount's clock reading.
+        const dt = Math.min(.05, Math.max(0, now - last) / 1000);
         last = now;
         if (vp.width !== size.width || vp.height !== size.height) {
           size = vp;
@@ -378,6 +379,11 @@
           const goal = explorer.measure === 'effort' ? 1 : 0;
           blend = reduced || Math.abs(goal - blend) < 1e-4 ? goal : blend + (goal - blend) * (1 - Math.exp(-dt * 3.2));
           moveCamera(now, dt);
+          if (motion.kind === 'free' || motion.kind === 'gliding') {
+            // The reader moved the view, so the address follows it.
+            const here = addressOf(explorer.here.focus, cam, blend);
+            if (!same(here, explorer.here)) explorer.follow(followed = here);
+          }
           steer(now, dt);
           explorer.camera = cam;
           boxes = layout(cam, area, blend, CAPACITY);
@@ -428,25 +434,9 @@
 
   <div class="labels" aria-hidden="true" style:perspective="{PERSPECTIVE}px">
     <div class="plane" style:transform="rotateX({-tilt.x}rad) rotateY({tilt.y}rad)">
-      {#if exhibit}
-        {@const { project } = exhibit.project}
-        {#key exhibit.project}
-          <div class="exhibit" style:transform="translate3d({exhibit.x}px, {exhibit.y}px, 0) translateY(-50%)" style:width="{exhibit.w}px" style:--accent={colorOf(exhibit.project)}>
-            {#if project.preview?.kind === 'image'}
-              <img src={project.preview.src} alt="" />
-            {:else if project.preview?.kind === 'qbar-fleet'}
-              <div class="fleet"><QBarFleet /></div>
-            {:else}
-              <p class="exhibit-kind">{project.kind}</p>
-              <p class="exhibit-text">{project.summary}</p>
-            {/if}
-          </div>
-        {/key}
-      {/if}
       {#each labels as label (label.key)}
         <div
           class="label"
-          class:quiet={label.quiet}
           class:vertical={label.vertical}
           style:transform="translate3d({label.x}px, {label.y}px, {label.z}px)"
           style:width="{label.w}px"
@@ -454,6 +444,24 @@
         >
           <span class="name" style:font-size="{label.size}px">{label.text}</span>
           {#if label.sub}<span class="sub">{label.sub}</span>{/if}
+          {#if label.detail}
+            {@const { project, accent, links, picture, summary } = label.detail}
+            <div class="detail" style:--accent={accent}>
+              {#if links}
+                <nav class="links">
+                  {#each project.links as link (link.href)}
+                    <a href={link.href} target="_blank" rel="noreferrer" tabindex="-1">{link.label} ↗</a>
+                  {/each}
+                </nav>
+              {/if}
+              {#if summary}<p class="summary">{project.summary}</p>{/if}
+              {#if picture && project.preview?.kind === 'image'}
+                <img src={project.preview.src} alt="" draggable="false" />
+              {:else if picture && project.preview?.kind === 'qbar-fleet'}
+                <div class="fleet"><QBarFleet /></div>
+              {/if}
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
@@ -495,20 +503,21 @@
     position: absolute; left: 0; top: 0; overflow: hidden; padding: 6px 8px;
     display: flex; flex-direction: column; gap: 4px; color: #edf3fb;
   }
-  .name { font-weight: 620; letter-spacing: -.035em; line-height: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 12px rgba(8,11,16,.6); }
-  .sub { font: 500 10px/1.2 var(--mono); color: rgba(216,226,240,.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name { flex: none; font-weight: 620; letter-spacing: -.035em; line-height: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 12px rgba(8,11,16,.6); }
+  .sub { flex: none; font: 500 10px/1.2 var(--mono); color: rgba(216,226,240,.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vertical .name { writing-mode: vertical-rl; transform: rotate(180deg); }
-  .quiet .name { font-family: var(--mono); font-weight: 500; letter-spacing: 0; color: rgba(216,226,240,.78); }
 
-  .exhibit {
-    position: absolute; left: 0; top: 0; padding: 14px; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-    background: rgba(8,11,16,.82); box-shadow: 0 30px 80px rgba(0,0,0,.5); animation: decode .55s cubic-bezier(.2,.7,.2,1) both;
+  .detail { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .links { display: flex; flex-wrap: wrap; gap: 5px; max-height: 24px; overflow: hidden; }
+  /* Links are the one thing in the label layer that takes the pointer. */
+  .links a {
+    pointer-events: auto; padding: 5px 7px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 3px;
+    background: rgba(8,11,16,.55); font: 600 10px/1 var(--mono); color: #dfe7f1; white-space: nowrap;
   }
-  .exhibit img { display: block; width: 100%; height: auto; max-height: 52vh; object-fit: contain; }
-  .exhibit .fleet { background: #090b10; }
-  .exhibit-kind { margin: 0 0 10px; font: 600 10px/1 var(--mono); letter-spacing: .12em; color: var(--accent); }
-  .exhibit-text { margin: 0; font-size: 19px; line-height: 1.45; letter-spacing: -.015em; color: #d4deea; }
-  @keyframes decode { from { opacity: 0; clip-path: inset(0 100% 0 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
+  .links a:hover { background: var(--accent); color: #05100c; }
+  .summary { flex: none; max-width: 64ch; margin: 0; font-size: 12.5px; line-height: 1.45; color: #c3cfdd; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 8px rgba(8,11,16,.8); }
+  .detail img { flex: 0 1 auto; min-height: 0; max-width: min(100%, 720px); object-fit: contain; object-position: left top; align-self: flex-start; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: #090b10; }
+  .detail .fleet { flex: none; max-width: 720px; background: #090b10; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
 
   .axis { position: absolute; color: rgba(216,226,240,.42); font: 500 9px/1 var(--mono); pointer-events: none; }
   /* Sized explicitly: the element's own default size would otherwise win over the insets. */
@@ -529,9 +538,6 @@
 
   @media (max-width: 600px) {
     .probability { display: none; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .exhibit { animation: none; }
   }
 
   .unavailable { position: absolute; inset: auto 24px 50% 24px; text-align: center; color: var(--muted); font: 500 12px/1.5 var(--mono); }

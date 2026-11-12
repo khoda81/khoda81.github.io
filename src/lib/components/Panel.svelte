@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { encode, entropy, lineage, name, root, spanAt, type Focus, type Node, type Place, type ProjectNode, type ThemeNode } from '#lib/code.ts';
+  import { entropy, lineage, name, root, spanAt, type Node, type Place, type ProjectNode, type ThemeNode } from '#lib/code.ts';
+  import { href as hrefOf, type Address } from '#lib/explorer/address.ts';
   import { explorer } from '#lib/explorer/explorer.svelte.ts';
   import { colorOf } from '#lib/palette.ts';
   import Preview from './Preview.svelte';
@@ -18,12 +19,13 @@
   const stats = $derived.by(() => {
     if (place.kind === 'root') return null;
     const P = probability(place);
-    return { p: P / probability(place.parent!), bits: -Math.log2(P), H: entropy(place, blend) };
+    // A project is a leaf: nothing inside it is left to choose.
+    return { p: P / probability(place.parent!), bits: -Math.log2(P), H: place.kind === 'project' ? null : entropy(place, blend) };
   });
 
   /** The index navigates at the current depth, so reading inside the page stays inside it. */
-  const at = (target: Place): Focus => ({ place: target, level: focus.level });
-  const href = (target: Place) => `#${encode(at(target))}`;
+  const at = (target: Place): Address => ({ focus: { place: target, level: focus.level }, bits: '' });
+  const href = (target: Place) => hrefOf(at(target), blend);
 
   function go(event: MouseEvent, target: Place) {
     event.preventDefault();
@@ -49,10 +51,11 @@
         This page is an arithmetic code. Each project gets a slice of [0, 1) as tall as the attention I’d give it,
         and reaching it costs −log₂ of that in bits, so the wider a box, the more surprising it is.
         <b>Scroll</b> to read more bits, <b>drag</b> to move, <b>click</b> to decode; the arrow keys walk the tree.
-        The URL is the codeword. The last sixteenth, <code>1111</code>, is this page, so it contains itself.
+        The URL names the place you’re in, and its <code>#bits</code> are the biggest dyadic interval of it on screen;
+        type your own in the header to go there. The last sixteenth, <code>1111</code>, is this page, so it contains itself.
       </p>
       {#if focus.level}
-        <p class="how">You are {focus.level === 1 ? 'one page' : `${focus.level} pages`} deep: every <code>1111</code> at the front of the codeword is another trip through it.</p>
+        <p class="how">You are {focus.level === 1 ? 'one page' : `${focus.level} pages`} deep: every <code>1111</code> at the front of the bits is another trip through it.</p>
       {/if}
       <div class="links">
         <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">GitHub ↗</a>
@@ -83,7 +86,7 @@
       <dl class="stats">
         <div><dt>p given parent</dt><dd>{stats.p.toFixed(3)}</dd></div>
         <div><dt>−log₂ P</dt><dd>{stats.bits.toFixed(2)} bits</dd></div>
-        <div><dt>H of what’s inside</dt><dd>{stats.H.toFixed(2)} bits</dd></div>
+        {#if stats.H !== null}<div><dt>H of what’s inside</dt><dd>{stats.H.toFixed(2)} bits</dd></div>{/if}
         {#if place.kind === 'project' && place.project.commits}
           <div><dt>commits</dt><dd>{place.project.commits.toLocaleString('en-US')}</dd></div>
         {/if}

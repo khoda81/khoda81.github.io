@@ -11,7 +11,7 @@ const themeColors: Record<string, string> = {
   play: '#ff9eb5'
 };
 
-/** A node's colour is its theme's; the root and its end symbol are neutral, and the page is the site's green. */
+/** A node's colour is its theme's; the root is neutral, and the page is the site's green. */
 export function colorOf(node: Node): string {
   for (let n: Node | null = node; n; n = n.parent) {
     if (n.kind === 'theme') return themeColors[n.theme.slug]!;

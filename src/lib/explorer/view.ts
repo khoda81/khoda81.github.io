@@ -60,11 +60,15 @@ export function raise(cam: Camera, levels = 1): Camera {
   return { level: cam.level - levels, x: cam.x + PAGE_BITS * levels, y: 1 - (1 - cam.y) * 2 ** (-PAGE_BITS * levels) };
 }
 
+/** How deep into one level the camera may go: its view is then still many doubles tall, and its codeword fits in one. */
+const MAX_DEPTH = 40;
+
 /**
  * Keeps the camera in the level it is looking at, so coordinates never shrink
  * below float precision however long you zoom: it goes a level down once its
  * left edge passes the page's right edge inside the page, and back up once it
  * leaves the level's root. The half-bit gap stops it flapping at the boundary.
+ * Outside the page there is no deeper level, so zoom stops at MAX_DEPTH.
  */
 export function renormalize(cam: Camera): Camera {
   for (;;) {
@@ -73,43 +77,53 @@ export function renormalize(cam: Camera): Camera {
     } else if (0 < cam.level && (cam.x < 0 || cam.y < 0 || 1 <= cam.y)) {
       cam = raise(cam);
     } else {
-      return cam;
+      return cam.x <= MAX_DEPTH ? cam : { ...cam, x: MAX_DEPTH };
     }
   }
 }
 
+/** `at` takes the fraction of the way along, in [0, 1]. */
 export type Flight = { readonly duration: number; at(t: number): Camera };
 
+/** A view's vertical extent in probability; its depth follows from `w`. */
+type View = { readonly y: number; readonly w: number };
+
 /**
- * The smooth zoom-and-pan path of van Wijk and Nuij (2003): it zooms out just
- * far enough to keep both ends in context, then in. `duration` is in ms.
+ * The path between two cameras, as one straight motion when one view's centre
+ * lies inside the other: the smaller view moves in a straight line on screen
+ * while it grows to fill it, or shrinks away from filling it. Depth and zoom
+ * are one coordinate, so both screen axes move at constant speed and nothing
+ * pans first and zooms after. Views too far apart for that zoom out to the
+ * smallest view holding both, then in. `duration` is in ms.
  */
 export function flight(from: Camera, to: Camera): Flight {
   const level = Math.min(from.level, to.level);
-  const a = raise(from, from.level - level), b = raise(to, to.level - level);
-  const w0 = viewSpan(a.x), w1 = viewSpan(b.x), d = Math.abs(b.y - a.y), sign = Math.sign(b.y - a.y);
-  const rho = Math.SQRT2, rho2 = 2, rho4 = 4;
-  const camera = (y: number, w: number) => renormalize({ level, x: -Math.log2(w) - CONTEXT_BITS, y });
+  const a = view(raise(from, from.level - level)), b = view(raise(to, to.level - level));
+  const [small, large] = a.w < b.w ? [a, b] : [b, a];
+  const lo = Math.min(a.y - a.w / 2, b.y - b.w / 2), hi = Math.max(a.y + a.w / 2, b.y + b.w / 2);
+  const middle = Math.abs(small.y - large.y) <= large.w / 2 ? large : { y: (lo + hi) / 2, w: hi - lo };
+  // Each leg is as long as the bits it zooms plus the view heights it pans.
+  const length = (inner: View) => Math.log2(middle.w / inner.w) + Math.abs(inner.y - middle.y) / middle.w;
+  const out = length(a), into = length(b), total = out + into;
+  const camera = ({ y, w }: View) => renormalize({ level, x: -Math.log2(w) - CONTEXT_BITS, y });
 
-  if (d < 1e-12 * w0) {
-    const S = Math.log(w1 / w0) / rho;
-    return { duration: span(S), at: t => camera(a.y, w0 * Math.exp(rho * t * S)) };
-  }
-  const b0 = (w1 * w1 - w0 * w0 + rho4 * d * d) / (2 * w0 * rho2 * d);
-  const b1 = (w1 * w1 - w0 * w0 - rho4 * d * d) / (2 * w1 * rho2 * d);
-  const r0 = Math.log(Math.sqrt(b0 * b0 + 1) - b0), r1 = Math.log(Math.sqrt(b1 * b1 + 1) - b1);
-  const S = (r1 - r0) / rho;
   return {
-    duration: span(S),
+    duration: Math.min(1700, Math.max(420, total * 260)),
     at: t => {
-      const s = t * S;
-      const u = w0 / (rho2 * d) * (Math.cosh(r0) * Math.tanh(rho * s + r0) - Math.sinh(r0));
-      return camera(a.y + sign * u * d, w0 * Math.cosh(r0) / Math.cosh(rho * s + r0));
+      const d = t * total;
+      return camera(d < out ? leg(a, middle, d / out) : leg(b, middle, into === 0 ? 0 : 1 - (d - out) / into));
     }
   };
 }
 
-/** Milliseconds for a path of length `S`: longer journeys take longer, within reason. */
-function span(S: number): number {
-  return Math.min(1700, Math.max(420, Math.abs(S) * 520));
+/**
+ * The view `u` of the way from `inner` (0) out to `outer` (1): zoom is
+ * geometric in `u`, and `inner`'s centre moves linearly on screen from the
+ * middle to where `outer` shows it.
+ */
+function leg(inner: View, outer: View, u: number): View {
+  const w = inner.w * (outer.w / inner.w) ** u;
+  return { y: inner.y - u * (inner.y - outer.y) / outer.w * w, w };
 }
+
+const view = (cam: Camera): View => ({ y: cam.y, w: viewSpan(cam.x) });

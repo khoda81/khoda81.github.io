@@ -50,4 +50,22 @@ describe('the view', () => {
     }
     expect(0 < path.duration).toBe(true);
   });
+
+  test('zooming into a place moves it in a straight line on screen, at constant speed', () => {
+    const from = frame({ lo: 0, hi: 1 }, 0), to = frame({ lo: .3, hi: .4 }, 0);
+    const path = flight(from, to);
+    const at = (t: number) => toScreen(absolute(path.at(t)), vp, 2, .35);
+    const start = at(0), end = at(1);
+    for (const t of [.2, .5, .8]) {
+      expect(at(t).x).toBeCloseTo(start.x + (end.x - start.x) * t, 6);
+      expect(at(t).y).toBeCloseTo(start.y + (end.y - start.y) * t, 6);
+    }
+  });
+
+  test('a flight between distant places zooms out only as far as shows both', () => {
+    const from = frame({ lo: .1, hi: .12 }, 0), to = frame({ lo: .8, hi: .82 }, 0);
+    const path = flight(from, to);
+    const widest = Math.min(...Array.from({ length: 101 }, (_, i) => absolute(path.at(i / 100)).x));
+    expect(widest).toBeCloseTo(frame({ lo: .1, hi: .82 }, 0).x, 6);
+  });
 });

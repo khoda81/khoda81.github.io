@@ -2,8 +2,8 @@ import { DynamicDrawUsage, InstancedBufferAttribute, InstancedBufferGeometry, Me
 
 export type Rgb = readonly [number, number, number];
 
-export type Style = 'plain' | 'end' | 'page' | 'link';
-const styleIndex: Record<Style, number> = { plain: 0, end: 1, page: 2, link: 3 };
+export type Style = 'plain' | 'page';
+const styleIndex: Record<Style, number> = { plain: 0, page: 1 };
 
 /** One box as a flat rectangle in world space: CSS px, origin at the screen centre, y up, lifted to `z`. */
 export type Slab = {
@@ -81,17 +81,9 @@ const fragmentShader = /* glsl */ `
     vec2 uv = vLocal / (2. * vHalf) + .5;
     float amount = (.07 + .5 * fill + .25 * glow) * (.82 + .18 * uv.y);
     // Styles arrive as interpolated floats, which need not be exactly whole, so compare by range.
-    if (style < .5) {
-    } else if (style < 1.5) {
-      // The end symbol: hatched, with stripes fixed to the box and filtered like its edges.
-      float u = vLocal.x + vLocal.y;
-      float t = abs(fract(u / 10.) - .5) * 10.;
-      amount *= .25 + .5 * clamp((2.5 - t) / max(fwidth(u), 1e-4) + .5, 0., 1.);
-    } else if (style < 2.5) {
+    if (.5 < style) {
       // The page shimmers, as everything inside it is the page again.
       amount += .1 * (.5 + .5 * sin(uTime * 1.7 - uv.x * 9.));
-    } else {
-      amount *= .7;
     }
     vec3 color = mix(uBackground, vColor, amount);
     color = mix(color, vColor * (1. + .35 * glow), border * (.45 + .55 * max(glow, fill)));

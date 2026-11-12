@@ -1,7 +1,11 @@
 import { PAGE_BITS, root, spanAt, type Node } from '../code.ts';
 import { raise, toScreen, type Camera, type Viewport } from './view.ts';
 
-/** A node as drawn this frame. Boxes tile the plane: siblings split the height, children sit to the right. */
+/**
+ * A node as drawn this frame. Boxes tile the plane: siblings split the height,
+ * children sit to the right. A project is a leaf, and every longer bit string
+ * inside its slice still means it, so its box runs on to the right forever.
+ */
 export type Box = {
   readonly node: Node;
   /** The recursion level the node is at. */
@@ -43,7 +47,7 @@ export function layout(cam: Camera, vp: Viewport, t: number, limit: number): Box
     const P = (s.hi - s.lo) * scale;
     const xRight = -Math.log2(P);
     const topLeft = toScreen(base, vp, node.kind === 'root' ? -ROOT_BITS : -Math.log2(parentP), lo + P);
-    const bottomRight = toScreen(base, vp, xRight, lo);
+    const bottomRight = toScreen(base, vp, node.kind === 'project' ? Infinity : xRight, lo);
     const x0 = topLeft.x, y0 = topLeft.y, x1 = bottomRight.x, y1 = bottomRight.y;
     // Children lie inside this box's height and to its right, so they are culled with it.
     if (y1 < 0 || vp.height < y0 || vp.width < x0 || y1 - y0 < MIN_HEIGHT) return;

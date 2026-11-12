@@ -1,6 +1,6 @@
 /// <reference types="bun" />
 import { expect, test } from 'bun:test';
-import { find, root } from '../code.ts';
+import { placeAt, root } from '../code.ts';
 import { boxAt, layout } from './layout.ts';
 import { frame } from './view.ts';
 
@@ -14,7 +14,7 @@ test('the root view shows the themes and, inside the page, the root again', () =
 });
 
 test('boxes never overlap, so a point picks at most one', () => {
-  const natlas = find('natlas')!;
+  const natlas = placeAt('/interfaces/natlas/')!;
   const boxes = layout(frame(natlas.spans.emphasis, 0), vp, .5, 4000);
   for (const [i, a] of boxes.entries()) {
     for (const b of boxes.slice(i + 1)) {
