@@ -51,14 +51,16 @@ describe('the view', () => {
     expect(0 < path.duration).toBe(true);
   });
 
-  test('zooming into a place moves it in a straight line on screen, at constant speed', () => {
-    const from = frame({ lo: 0, hi: 1 }, 0), to = frame({ lo: .3, hi: .4 }, 0);
+  test('an edge both views share stays put, and the others never double back', () => {
+    const from = frame({ lo: .25, hi: .75 }, 0), to = frame({ lo: .6, hi: .75 }, 0);
     const path = flight(from, to);
-    const at = (t: number) => toScreen(absolute(path.at(t)), vp, 2, .35);
-    const start = at(0), end = at(1);
-    for (const t of [.2, .5, .8]) {
-      expect(at(t).x).toBeCloseTo(start.x + (end.x - start.x) * t, 6);
-      expect(at(t).y).toBeCloseTo(start.y + (end.y - start.y) * t, 6);
+    let previous = toScreen(path.at(0), vp, 0, .25).y;
+    for (let i = 1; i <= 50; i += 1) {
+      const cam = absolute(path.at(i / 50));
+      expect(toScreen(cam, vp, 0, .75).y).toBeCloseTo(0, 6);
+      const bottom = toScreen(cam, vp, 0, .25).y;
+      expect(previous <= bottom + 1e-9).toBe(true);
+      previous = bottom;
     }
   });
 

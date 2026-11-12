@@ -55,7 +55,7 @@
         type your own in the header to go there. The last sixteenth, <code>1111</code>, is this page, so it contains itself.
       </p>
       {#if focus.level}
-        <p class="how">You are {focus.level === 1 ? 'one page' : `${focus.level} pages`} deep: every <code>1111</code> at the front of the bits is another trip through it.</p>
+        <p class="how">You are inside this page, which the <code>1111</code> at the front of the bits says. Every page inside it looks the same, so however far in you go you are only ever one page deep, and one step out leads back out.</p>
       {/if}
       <div class="links">
         <a href="https://github.com/khoda81" target="_blank" rel="noreferrer">GitHub ↗</a>

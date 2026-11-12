@@ -85,45 +85,58 @@ export function renormalize(cam: Camera): Camera {
 /** `at` takes the fraction of the way along, in [0, 1]. */
 export type Flight = { readonly duration: number; at(t: number): Camera };
 
-/** A view's vertical extent in probability; its depth follows from `w`. */
-type View = { readonly y: number; readonly w: number };
-
 /**
- * The path between two cameras, as one straight motion when one view's centre
- * lies inside the other: the smaller view moves in a straight line on screen
- * while it grows to fill it, or shrinks away from filling it. Depth and zoom
- * are one coordinate, so both screen axes move at constant speed and nothing
- * pans first and zooms after. Views too far apart for that zoom out to the
- * smallest view holding both, then in. `duration` is in ms.
+ * The path between two cameras, as a transition of the interval on screen:
+ * both of its edges move from where they start to where they end by the same
+ * fraction at every moment, so an edge the two views share never moves, and
+ * no edge ever doubles back. The fraction grows geometrically, so the zoom
+ * runs at a constant rate in bits, and with it the depth, which is the zoom.
+ * It is a scaling about the one point both views show at the same place.
+ *
+ * Between views far apart that would pan across many screens, so instead the
+ * flight widens to the smallest interval holding both, then narrows to the
+ * destination. `duration` is in ms.
  */
 export function flight(from: Camera, to: Camera): Flight {
   const level = Math.min(from.level, to.level);
-  const a = view(raise(from, from.level - level)), b = view(raise(to, to.level - level));
-  const [small, large] = a.w < b.w ? [a, b] : [b, a];
-  const lo = Math.min(a.y - a.w / 2, b.y - b.w / 2), hi = Math.max(a.y + a.w / 2, b.y + b.w / 2);
-  const middle = Math.abs(small.y - large.y) <= large.w / 2 ? large : { y: (lo + hi) / 2, w: hi - lo };
-  // Each leg is as long as the bits it zooms plus the view heights it pans.
-  const length = (inner: View) => Math.log2(middle.w / inner.w) + Math.abs(inner.y - middle.y) / middle.w;
-  const out = length(a), into = length(b), total = out + into;
-  const camera = ({ y, w }: View) => renormalize({ level, x: -Math.log2(w) - CONTEXT_BITS, y });
+  const a = viewOf(raise(from, from.level - level)), b = viewOf(raise(to, to.level - level));
+  const both = { lo: Math.min(a.lo, b.lo), hi: Math.max(a.hi, b.hi) };
+  const legs: [Span, Span][] = width(both) <= 2 * Math.max(width(a), width(b)) ? [[a, b]] : [[a, both], [both, b]];
+  const lengths = legs.map(([p, q]) => length(p, q));
+  const total = lengths.reduce((sum, l) => sum + l, 0);
 
   return {
     duration: Math.min(1700, Math.max(420, total * 260)),
     at: t => {
-      const d = t * total;
-      return camera(d < out ? leg(a, middle, d / out) : leg(b, middle, into === 0 ? 0 : 1 - (d - out) / into));
+      let d = t * total;
+      for (const [i, [p, q]] of legs.entries()) {
+        const l = lengths[i]!;
+        if (d <= l || i === legs.length - 1) return cameraOn(level, between(p, q, l === 0 ? 1 : Math.min(1, d / l)));
+        d -= l;
+      }
+      throw new Error('a flight has at least one leg');
     }
   };
 }
 
-/**
- * The view `u` of the way from `inner` (0) out to `outer` (1): zoom is
- * geometric in `u`, and `inner`'s centre moves linearly on screen from the
- * middle to where `outer` shows it.
- */
-function leg(inner: View, outer: View, u: number): View {
-  const w = inner.w * (outer.w / inner.w) ** u;
-  return { y: inner.y - u * (inner.y - outer.y) / outer.w * w, w };
+/** The interval `u` of the way from `p` to `q`: both edges move by the fraction of the width's geometric progress. */
+function between(p: Span, q: Span, u: number): Span {
+  const r = width(q) / width(p);
+  const s = Math.abs(r - 1) < 1e-9 ? u : (r ** u - 1) / (r - 1);
+  return { lo: p.lo + (q.lo - p.lo) * s, hi: p.hi + (q.hi - p.hi) * s };
 }
 
-const view = (cam: Camera): View => ({ y: cam.y, w: viewSpan(cam.x) });
+/** How long a leg is: the bits it zooms, plus the view heights it pans. */
+function length(p: Span, q: Span): number {
+  return Math.abs(Math.log2(width(q) / width(p))) + Math.abs(p.lo + p.hi - q.lo - q.hi) / 2 / Math.max(width(p), width(q));
+}
+
+const width = ({ lo, hi }: Span) => hi - lo;
+
+const viewOf = (cam: Camera): Span => {
+  const w = viewSpan(cam.x);
+  return { lo: cam.y - w / 2, hi: cam.y + w / 2 };
+};
+
+/** The camera whose view is exactly `span`, at `level`. */
+const cameraOn = (level: number, span: Span): Camera => renormalize({ level, x: -Math.log2(width(span)) - CONTEXT_BITS, y: (span.lo + span.hi) / 2 });

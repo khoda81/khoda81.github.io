@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 import { PAGE_CODE, placeAt, places, root, spanAt, type Place } from '../code.ts';
-import { addressOf, cameraFor, href, parse, type Address } from './address.ts';
+import { addressOf, cameraFor, href, parse, shallower, type Address } from './address.ts';
 import { frame } from './view.ts';
 
 const at = (place: Place, bits = '', level = 0): Address => ({ focus: { place, level }, bits });
@@ -50,5 +50,16 @@ describe('addresses', () => {
       const [path, bits = ''] = href(address, 0).split('#');
       expect(parse(path!, bits)).toEqual(address);
     }
+  });
+});
+
+describe('the recursion', () => {
+  test('two pages deep is shown as one, with the same view', () => {
+    const deep = at(root, PAGE_CODE.repeat(2) + '01');
+    expect(shallower(deep)).toEqual(at(root, PAGE_CODE + '01'));
+    expect(shallower(at(markets, '1', 2))).toEqual(at(markets, '1', 1));
+    const cam = cameraFor(at(markets, '1', 2), 0), folded = cameraFor(at(markets, '1', 1), 0);
+    expect({ ...cam, level: cam.level - 1 }).toEqual(folded);
+    expect(() => shallower(at(markets))).toThrow();
   });
 });

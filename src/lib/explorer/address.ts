@@ -55,6 +55,22 @@ export function addressOf(focus: Focus, cam: Camera, t: number): Address {
   return { focus, bits: fit(view, slice) };
 }
 
+/**
+ * How many pages deep the reader is ever told they are. Every level inside the
+ * page looks exactly like the one around it, so a reader two pages in is
+ * shown, without a visible change, as one page in: they can go in forever,
+ * and one step out always leads out.
+ */
+export const DEEPEST = 1;
+
+/** The same address told one page shallower, for a view that is two pages deep. */
+export function shallower({ focus: { place, level }, bits }: Address): Address {
+  if (0 < level) return { focus: { place, level: level - 1 }, bits };
+  // Outside the page only the root holds a view inside it, so its bits begin by entering the page.
+  if (place.kind !== 'root' || !bits.startsWith(PAGE_CODE)) throw new Error(`${pathOf(place)}#${bits} is not inside the page`);
+  return { focus: { place, level }, bits: bits.slice(PAGE_CODE.length) };
+}
+
 /** The URL of `address`, relative to the site. */
 export function href(address: Address, t: number): string {
   const { focus, bits } = address;

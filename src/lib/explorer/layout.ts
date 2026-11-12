@@ -55,7 +55,7 @@ export function layout(cam: Camera, vp: Viewport, t: number, limit: number): Box
     const level = base.level + depth;
     // A copy of the root is the page box that holds it, so only the outermost root gets a column.
     if (node.kind !== 'root' || depth === 0) {
-      boxes.push({ node, level, key: `${level}:${node.id}`, x0, x1, y0, y1, p: P / parentP, P: P / scale, bits: xRight + PAGE_BITS * base.level });
+      boxes.push({ node, level, key: keyOf(level, node.id), x0, x1, y0, y1, p: P / parentP, P: P / scale, bits: xRight + PAGE_BITS * base.level });
     }
     const children = node.kind === 'page' ? root.children : node.children;
     const childDepth = node.kind === 'page' ? depth + 1 : depth;
@@ -64,6 +64,14 @@ export function layout(cam: Camera, vp: Viewport, t: number, limit: number): Box
 
   visit(root, 0, 1);
   return boxes;
+}
+
+const keyOf = (level: number, id: number) => `${level}:${id}`;
+
+/** A box's key once the scene calls its level one page shallower. */
+export function shallowerKey(key: string): string {
+  const [level, id] = key.split(':').map(Number);
+  return keyOf(level! - 1, id!);
 }
 
 /** The box under a screen point. Boxes don't overlap, so there is at most one. */

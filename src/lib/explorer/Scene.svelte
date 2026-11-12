@@ -7,9 +7,9 @@
   import type { Project } from '../catalog.ts';
   import { BACKGROUND, colorOf, rgb } from '../palette.ts';
   import QBarFleet from '../components/QBarFleet.svelte';
-  import { addressOf, cameraFor, same, type Address } from './address.ts';
+  import { addressOf, cameraFor, DEEPEST, same, shallower, type Address } from './address.ts';
   import { explorer } from './explorer.svelte.ts';
-  import { boxAt, layout, type Box } from './layout.ts';
+  import { boxAt, layout, shallowerKey, type Box } from './layout.ts';
   import type { Slab, Slabs, Rgb } from './slabs.ts';
   import { CONTEXT_BITS, flight, fromScreen, hold, pxPerBit, viewSpan, type Camera, type Flight, type Grab, type Viewport } from './view.ts';
 
@@ -384,6 +384,12 @@
             const here = addressOf(explorer.here.focus, cam, blend);
             if (!same(here, explorer.here)) explorer.follow(followed = here);
           }
+          // A flight plans in its own levels, so the recursion is only folded between them.
+          while (motion.kind !== 'flying' && DEEPEST < cam.level) {
+            cam = { ...cam, level: cam.level - 1 };
+            explorer.follow(followed = shallower(explorer.here));
+            glows = new Map([...glows].map(([key, glow]) => [shallowerKey(key), glow]));
+          }
           steer(now, dt);
           explorer.camera = cam;
           boxes = layout(cam, area, blend, CAPACITY);
@@ -508,7 +514,7 @@
   .vertical .name { writing-mode: vertical-rl; transform: rotate(180deg); }
 
   .detail { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-  .links { display: flex; flex-wrap: wrap; gap: 5px; max-height: 24px; overflow: hidden; }
+  .links { flex: none; display: flex; flex-wrap: wrap; gap: 5px; max-height: 24px; overflow: hidden; }
   /* Links are the one thing in the label layer that takes the pointer. */
   .links a {
     pointer-events: auto; padding: 5px 7px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 3px;

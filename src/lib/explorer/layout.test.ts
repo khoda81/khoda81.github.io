@@ -23,7 +23,9 @@ test('boxes never overlap, so a point picks at most one', () => {
     }
   }
   const natlasBox = boxes.find(b => b.node === natlas && b.level === 0)!;
-  expect(boxAt(boxes, (natlasBox.x0 + natlasBox.x1) / 2, (natlasBox.y0 + natlasBox.y1) / 2)).toBe(natlasBox);
+  // A project is a leaf and runs on to the right, so probe just inside its left edge.
+  expect(natlasBox.x1).toBe(Infinity);
+  expect(boxAt(boxes, natlasBox.x0 + 10, (natlasBox.y0 + natlasBox.y1) / 2)).toBe(natlasBox);
 });
 
 test('from inside the page, the outer level stays visible on the left', () => {
