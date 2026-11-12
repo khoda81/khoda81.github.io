@@ -5,7 +5,7 @@
     "": {
       "name": "khoda81-portfolio",
       "devDependencies": {
-        "@qbar/qbar": "^0.4.0",
+        "@qbar/qbar": "^0.4.1",
         "@sveltejs/adapter-static": "^4.0.1",
         "@sveltejs/kit": "^3.1.1",
         "@sveltejs/vite-plugin-svelte": "^7.2.0",
@@ -36,7 +36,7 @@
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 
-    "@qbar/qbar": ["@qbar/qbar@0.4.0", "", {}, "sha512-eBrp2i+5lVMSxGKoEgG+oxQFSo45l6aCMsTDUCrSOI2R9DWniEbbY8U5yvyCwF4pKiE9kovJ5dAV2YKmvNxZxQ=="],
+    "@qbar/qbar": ["@qbar/qbar@0.4.1", "", {}, "sha512-O91eS39H6ElxhafIrbUl5+tfkyacGhPiOwS1FZK2IXIKnoWp70GGFKrNPT9wpZ1hJ5g6Q+J9GYTV9epiQjHLIQ=="],
 
     "@rolldown/binding-android-arm-eabi": ["@rolldown/binding-android-arm-eabi@1.2.16", "", { "os": "android", "cpu": "arm" }, "sha512-ia3DwAs0OsMGS7+IConptSiyk9pEXkOx/AbJ2n/lAGxH3QkWQus1t8d7gnAT38FCU2sQu8lUbeR6AiZFv4JxaA=="],
 
