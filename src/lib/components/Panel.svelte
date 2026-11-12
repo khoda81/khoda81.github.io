@@ -27,9 +27,14 @@
   const at = (target: Place): Address => ({ focus: { place: target, level: focus.level }, bits: '' });
   const href = (target: Place) => hrefOf(at(target));
 
+  /**
+   * Goes to `target` and shows it: where the panel is a sheet over the scene, the sheet slides back down to reveal
+   * the scene flying there. Beside the scene the page never scrolls, so this changes nothing.
+   */
   function go(event: MouseEvent, target: Place) {
     event.preventDefault();
     explorer.go(at(target));
+    scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }
 </script>
 
